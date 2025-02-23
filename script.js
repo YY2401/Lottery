@@ -1,9 +1,15 @@
 // 奖池，包含名称、图片和默认概率（百分比）
 let prizes = [
-    { name: "金奖", image: "images/gold.png", probability: 10 }, // 10%
-    { name: "银奖", image: "images/silver.png", probability: 20 }, // 20%
-    { name: "铜奖", image: "images/bronze.png", probability: 30 }, // 30%
-    { name: "谢谢参与", image: "images/none.png", probability: 40 } // 40%
+    { name: "1", image: "images/1.jpg", probability: 10 }, // 10%
+    { name: "2", image: "images/2.jpg", probability: 10 }, // 10%
+    { name: "3", image: "images/3.jpg", probability: 10 }, // 10%
+    { name: "4", image: "images/4.jpg", probability: 10 }, // 10%
+    { name: "5", image: "images/5.jpg", probability: 10 }, // 10%
+    { name: "6", image: "images/6.jpg", probability: 10 }, // 10%
+    { name: "7", image: "images/7.jpg", probability: 10 }, // 10%
+    { name: "8", image: "images/8.jpg", probability: 10 }, // 10%
+    { name: "9", image: "images/9.jpg", probability: 10 }, // 10%
+    { name: "10", image: "images/10.jpg", probability: 10 }, // 10%
 ];
 
 // 从 localStorage 加载保存的概率
