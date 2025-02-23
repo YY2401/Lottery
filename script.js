@@ -1,28 +1,40 @@
-// 奖池，包含名称和图片文件名
-const prizes = [
-    { name: "1", image: "images/1.png" },
-    { name: "2", image: "images/2.png" },
-    { name: "3", image: "images/3.png" },
-    { name: "4", image: "images/4.png" },
-    { name: "5", image: "images/5.png" },
-    { name: "6", image: "images/6.png" },
-    { name: "7", image: "images/7.png" },
-    { name: "8", image: "images/8.png" },
-    { name: "9", image: "images/9.png" },
-    { name: "10", image: "images/10.png" },
+// 奖池，包含名称、图片和默认概率（百分比）
+let prizes = [
+    { name: "金奖", image: "images/gold.png", probability: 10 }, // 10%
+    { name: "银奖", image: "images/silver.png", probability: 20 }, // 20%
+    { name: "铜奖", image: "images/bronze.png", probability: 30 }, // 30%
+    { name: "谢谢参与", image: "images/none.png", probability: 40 } // 40%
 ];
 
-// 抽奖函数
+// 从 localStorage 加载保存的概率
+function loadSavedProbabilities() {
+    const saved = JSON.parse(localStorage.getItem("prizeProbabilities"));
+    if (saved) {
+        prizes.forEach((prize, index) => {
+            prize.probability = saved[index] || prize.probability;
+        });
+    }
+}
+
+// 抽奖函数（根据概率）
 function draw(times) {
     let result = [];
+    const totalProbability = prizes.reduce((sum, prize) => sum + (prize.probability || 0), 0);
     for (let i = 0; i < times; i++) {
-        const randomIndex = Math.floor(Math.random() * prizes.length);
-        result.push(prizes[randomIndex]);
+        const random = Math.random() * totalProbability;
+        let cumulative = 0;
+        for (const prize of prizes) {
+            cumulative += prize.probability;
+            if (random <= cumulative) {
+                result.push(prize);
+                break;
+            }
+        }
     }
     
     // 显示抽奖结果
     const resultDiv = document.getElementById("result");
-    resultDiv.innerHTML = ""; // 清空之前结果
+    resultDiv.innerHTML = "";
     result.forEach(item => {
         const div = document.createElement("div");
         div.className = "result-item";
@@ -35,15 +47,15 @@ function draw(times) {
     updateHistoryDisplay();
 }
 
-// 保存历史记录到 localStorage
+// 保存历史记录
 function saveToHistory(result) {
     let history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
     const timestamp = new Date().toLocaleString();
     result.forEach(item => {
-        history.unshift({ name: item.name, image: item.image, time: timestamp }); // 新记录插入开头
+        history.unshift({ name: item.name, image: item.image, time: timestamp });
     });
     if (history.length > 50) {
-        history = history.slice(0, 50); // 保留前50条
+        history = history.slice(0, 50);
     }
     localStorage.setItem("lotteryHistory", JSON.stringify(history));
 }
@@ -52,7 +64,7 @@ function saveToHistory(result) {
 function updateHistoryDisplay() {
     const historyDiv = document.getElementById("history");
     const history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
-    historyDiv.innerHTML = ""; // 清空之前内容
+    historyDiv.innerHTML = "";
     history.forEach(item => {
         const div = document.createElement("div");
         div.className = "history-item";
@@ -61,7 +73,47 @@ function updateHistoryDisplay() {
     });
 }
 
-// 页面加载时显示历史记录
+// 显示设置弹窗
+document.getElementById("settings-btn").addEventListener("click", function() {
+    const modal = document.getElementById("settings-modal");
+    const settingsDiv = document.getElementById("probability-settings");
+    settingsDiv.innerHTML = "";
+    
+    prizes.forEach((prize, index) => {
+        const div = document.createElement("div");
+        div.innerHTML = `${prize.name}: <input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}"> %`;
+        settingsDiv.appendChild(div);
+    });
+
+    const total = prizes.reduce((sum, prize) => sum + prize.probability, 0);
+    document.getElementById("probability-warning").textContent = 
+        total !== 100 ? `注意：目前總機率為 ${total}%，建議調整為 100%` : "";
+    
+    modal.style.display = "block";
+});
+
+// 关闭弹窗
+function closeModal() {
+    document.getElementById("settings-modal").style.display = "none";
+}
+
+// 保存设置
+function saveSettings() {
+    const inputs = document.querySelectorAll("#probability-settings input");
+    let newProbabilities = [];
+    inputs.forEach(input => {
+        const index = input.getAttribute("data-index");
+        const value = parseFloat(input.value) || 0;
+        prizes[index].probability = value;
+        newProbabilities.push(value);
+    });
+
+    localStorage.setItem("prizeProbabilities", JSON.stringify(newProbabilities));
+    closeModal();
+}
+
+// 页面加载时初始化
 window.onload = function() {
+    loadSavedProbabilities();
     updateHistoryDisplay();
 };

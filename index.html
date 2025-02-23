@@ -16,6 +16,21 @@
     <div id="result" class="result"></div>
     <h2>歷史紀錄</h2>
     <div id="history" class="history"></div>
+
+    <!-- 设置按钮 -->
+    <button id="settings-btn" class="settings-btn">設置</button>
+
+    <!-- 模态窗口 -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h3>調整獎項機率</h3>
+            <div id="probability-settings"></div>
+            <p id="probability-warning" class="warning"></p>
+            <button onclick="saveSettings()">保存</button>
+            <button onclick="closeModal()">取消</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
