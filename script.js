@@ -58,7 +58,7 @@ function draw(times) {
                 cumulative += prize.probability;
                 if (random <= cumulative) {
                     prize.quantity -= 1;
-                    result.push({ ...prize, player: playerName }); // 添加抽獎者名稱
+                    result.push({ ...prize, player: playerName });
                     adjustProbabilities();
                     totalProbability = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
                     break;
@@ -73,8 +73,10 @@ function draw(times) {
         result.forEach(item => {
             const div = document.createElement("div");
             div.className = "result-item";
-            div.innerHTML = `<img src="${item.image}" alt="${item.name}"><span>${item.name}</span>`;
-            div.addEventListener("click", () => showEnlargedImage(item.image, item.name));
+            div.style.color = item.textColor || '#333';
+            div.style.backgroundColor = item.bgColor || '#fff';
+            div.innerHTML = `<img src="${item.image}" alt="${item.name}"><span>${item.customText || item.name}</span>`;
+            div.addEventListener("click", () => showEnlargedImage(item.image, item.customText || item.name));
             resultDiv.appendChild(div);
         });
     }
@@ -101,18 +103,33 @@ function showEnlargedImage(imageSrc, name) {
 function saveToHistory(result) {
     let history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
     const timestamp = new Date().toLocaleString();
+
+    history.unshift({ isSeparator: true });
     result.forEach(item => {
         history.unshift({
             name: item.name,
-            image: item.image,
-            player: item.player, // 保存抽獎者
+            player: item.player,
+            customText: item.customText,
+            probability: item.probability,
+            textColor: item.textColor,
+            bgColor: item.bgColor,
             time: timestamp
         });
     });
+    history.unshift({ isSeparator: true });
+
     if (history.length > 50) {
         history = history.slice(0, 50);
     }
-    localStorage.setItem("lotteryHistory", JSON.stringify(history));
+    try {
+        localStorage.setItem("lotteryHistory", JSON.stringify(history));
+    } catch (e) {
+        if (e.name === "QuotaExceededError") {
+            Swal.fire('儲存空間已滿！', '歷史紀錄無法保存，請清空紀錄後重試。', 'error');
+            localStorage.removeItem("lotteryHistory");
+            history = [];
+        }
+    }
 }
 
 // 更新歷史紀錄顯示
@@ -123,9 +140,18 @@ function updateHistoryDisplay() {
         historyDiv.innerHTML = "";
         history.forEach(item => {
             const div = document.createElement("div");
-            div.className = "history-item";
-            div.innerHTML = `<img src="${item.image}" alt="${item.name}"><span>${item.player} 抽到 ${item.name} - ${item.time}</span>`;
-            div.addEventListener("click", () => showEnlargedImage(item.image, item.name));
+            if (item.isSeparator) {
+                div.className = "history-item separator";
+            } else {
+                div.className = "history-item";
+                div.style.color = item.textColor || '#333';
+                div.style.backgroundColor = item.bgColor || 'transparent';
+                div.innerHTML = `<span>${item.player} 抽到 ${item.customText || item.name} - ${item.time}</span>`;
+                const prize = prizes.find(p => p.name === item.name);
+                if (prize) {
+                    div.addEventListener("click", () => showEnlargedImage(prize.image, item.customText || item.name));
+                }
+            }
             historyDiv.appendChild(div);
         });
     }
@@ -157,6 +183,9 @@ function showAddPrizeModal() {
             <input type="file" id="prize-image" accept=".png,.jpg" style="margin: 10px 0;">
             <div>機率 (%): <input type="number" min="0" max="100" value="10" id="new-prob" style="margin: 10px 0;"></div>
             <div>數量: <input type="number" min="0" value="5" id="new-qty" style="margin: 10px 0;"></div>
+            <div>顯示文字: <input type="text" id="new-text" placeholder="預設為檔案名稱" style="margin: 10px 0;"></div>
+            <div>文字顏色: <input type="color" id="text-color" value="#333333" style="margin: 10px 0;"></div>
+            <div>背景顏色: <input type="color" id="bg-color" value="#ffffff" style="margin: 10px 0;"></div>
         `,
         showCancelButton: true,
         confirmButtonText: '添加',
@@ -165,6 +194,9 @@ function showAddPrizeModal() {
             const fileInput = document.getElementById("prize-image");
             const probability = parseFloat(document.getElementById("new-prob").value) || 10;
             const quantity = parseInt(document.getElementById("new-qty").value) || 5;
+            const customText = document.getElementById("new-text").value.trim();
+            const textColor = document.getElementById("text-color").value;
+            const bgColor = document.getElementById("bg-color").value;
 
             if (!fileInput.files || fileInput.files.length === 0) {
                 Swal.showValidationMessage('請選擇一個圖片檔案！');
@@ -186,7 +218,10 @@ function showAddPrizeModal() {
                         name: name,
                         image: e.target.result,
                         probability: probability,
-                        quantity: quantity
+                        quantity: quantity,
+                        customText: customText || name,
+                        textColor: textColor,
+                        bgColor: bgColor
                     });
                     localStorage.setItem("prizes", JSON.stringify(prizes));
                     resolve();
@@ -241,7 +276,10 @@ document.getElementById("settings-btn").addEventListener("click", () => {
                 <input type="checkbox" class="delete-check" data-index="${index}">
                 ${prize.name}: 
                 <input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"> % | 
-                數量: <input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input">
+                數量: <input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"> | 
+                文字: <input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"> | 
+                文字顏色: <input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"> | 
+                背景顏色: <input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input">
             </div>`;
     });
     html += '</div>';
@@ -258,10 +296,13 @@ document.getElementById("settings-btn").addEventListener("click", () => {
         confirmButtonText: '保存',
         cancelButtonText: '取消',
         focusConfirm: false,
-        width: '600px',
+        width: '1200px',
         preConfirm: () => {
             const probInputs = document.querySelectorAll(".swal2-modal .prob-input");
             const qtyInputs = document.querySelectorAll(".swal2-modal .qty-input");
+            const textInputs = document.querySelectorAll(".swal2-modal .text-input");
+            const textColorInputs = document.querySelectorAll(".swal2-modal [data-text-color-index]");
+            const bgColorInputs = document.querySelectorAll(".swal2-modal [data-bg-color-index]");
             probInputs.forEach(input => {
                 const index = input.getAttribute("data-index");
                 const value = parseFloat(input.value) || 0;
@@ -271,6 +312,19 @@ document.getElementById("settings-btn").addEventListener("click", () => {
                 const index = input.getAttribute("data-qty-index");
                 const value = parseInt(input.value) || 0;
                 prizes[index].quantity = value;
+            });
+            textInputs.forEach(input => {
+                const index = input.getAttribute("data-text-index");
+                const value = input.value.trim();
+                prizes[index].customText = value || prizes[index].name;
+            });
+            textColorInputs.forEach(input => {
+                const index = input.getAttribute("data-text-color-index");
+                prizes[index].textColor = input.value;
+            });
+            bgColorInputs.forEach(input => {
+                const index = input.getAttribute("data-bg-color-index");
+                prizes[index].bgColor = input.value;
             });
             thumbnailSize = parseInt(document.getElementById("thumbnail-size").value) || 80;
             enlargedSize = parseInt(document.getElementById("enlarged-size").value) || 300;
@@ -306,15 +360,20 @@ function deleteSelectedPrizes() {
             <input type="checkbox" class="delete-check" data-index="${index}">
             ${prize.name}: 
             <input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"> % | 
-            數量: <input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input">
+            數量: <input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"> | 
+            文字: <input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"> | 
+            文字顏色: <input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"> | 
+            背景顏色: <input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input">
         </div>
     `).join('');
 }
 
 // 暴露全局函數
-window.showAddPrizeModal = showAddPrizeModal;
-window.deleteSelectedPrizes = deleteSelectedPrizes;
-window.distributeProbabilities = distributeProbabilities;
+window.globalFunctions = {
+    showAddPrizeModal: showAddPrizeModal,
+    deleteSelectedPrizes: deleteSelectedPrizes,
+    distributeProbabilities: distributeProbabilities
+};
 
 // 頁面加載時初始化
 window.onload = function() {

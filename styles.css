@@ -173,3 +173,23 @@ button:hover {
     font-size: 14px;
     white-space: nowrap; /* 防止換行 */
 }
+
+.result-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    animation: scaleIn 0.3s ease-out; /* 縮放動畫 */
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+
+.history-item.separator {
+    border-bottom: 2px solid #333; /* 底線樣式 */
+    margin: 10px 0;
+    height: 0; /* 僅顯示底線 */
+}
