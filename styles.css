@@ -1,68 +1,175 @@
-/* 之前的样式保持不变，新增以下内容 */
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+    background-color: #f0f0f0;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+.buttons {
+    margin: 20px 0;
+}
+
+button {
+    padding: 12px 24px;
+    margin: 5px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+button:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
 
 .settings-btn {
     position: fixed;
     top: 10px;
     right: 10px;
-    padding: 10px 15px;
+    padding: 12px 20px;
     background-color: #28a745;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
-    z-index: 1000; /* 确保在最上层 */
+    z-index: 1000;
+    transition: transform 0.2s, background-color 0.2s;
 }
 
 .settings-btn:hover {
     background-color: #218838;
+    transform: scale(1.05);
 }
 
-.modal {
-    display: none; /* 默认隐藏 */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
-    z-index: 1000;
+.result {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
 }
 
-.modal-content {
-    background-color: white;
-    margin: 15% auto;
-    padding: 20px;
-    border-radius: 5px;
-    width: 80%;
-    max-width: 400px;
-    text-align: left;
+.result-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer; /* 点击放大 */
 }
 
-.modal-content h3 {
-    margin-top: 0;
+.result-item img {
+    max-width: var(--thumbnail-size, 80px); /* 默认 80px */
+    max-height: var(--thumbnail-size, 80px);
+    object-fit: contain; /* 等比例缩放 */
 }
 
-.modal-content input {
-    width: 60px;
-    margin-left: 10px;
+.result-item span {
+    margin-top: 5px;
+    font-size: 16px;
+    color: #333;
 }
 
-.warning {
-    color: #dc3545;
+.history {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+    cursor: pointer; /* 点击放大 */
+}
+
+.history-item img {
+    max-width: 40px; /* 历史记录固定小图 */
+    max-height: 40px;
+    object-fit: contain;
+    margin-right: 10px;
+}
+
+.history-item span {
     font-size: 14px;
-    margin: 10px 0;
+}
+.clear-btn {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
 }
 
-.modal-content button {
+.clear-btn:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
+.swal2-modal .prize-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.swal2-modal .prize-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.swal2-modal .prize-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.swal2-modal .prize-item input[type="number"] {
+    width: 60px;
+    margin: 0 5px;
+}
+
+.swal2-modal .action-btn {
     margin: 10px 5px 0 0;
     padding: 8px 15px;
-    background-color: #007bff;
+    background-color: #17a2b8;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
 }
 
-.modal-content button:hover {
-    background-color: #0056b3;
+.swal2-modal .action-btn:hover {
+    background-color: #138496;
+}
+
+.input-section {
+    margin: 20px 0;
+}
+
+.input-section label {
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+.input-section input[type="text"] {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 200px;
+}
+
+.history-item span {
+    font-size: 14px;
+    white-space: nowrap; /* 防止換行 */
 }
