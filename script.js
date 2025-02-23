@@ -1,15 +1,15 @@
 // 奖池，包含名称和图片文件名
 const prizes = [
-    { name: "1", image: "1/gold.png" },
-    { name: "2", image: "2/silver.png" },
-    { name: "3", image: "3/bronze.png" },
-    { name: "4", image: "4/none.png" },
-    { name: "5", image: "5/none.png" },
-    { name: "6", image: "6/none.png" },
-    { name: "7", image: "7/none.png" },
-    { name: "8", image: "8/none.png" },
-    { name: "9", image: "9/none.png" },
-    { name: "10", image: "10/none.png" },
+    { name: "1", image: "images/1.png" },
+    { name: "2", image: "images/2.png" },
+    { name: "3", image: "images/3.png" },
+    { name: "4", image: "images/4.png" },
+    { name: "5", image: "images/5.png" },
+    { name: "6", image: "images/6.png" },
+    { name: "7", image: "images/7.png" },
+    { name: "8", image: "images/8.png" },
+    { name: "9", image: "images/9.png" },
+    { name: "10", image: "images/10.png" },
 ];
 
 // 抽奖函数
