@@ -14,18 +14,28 @@ function loadSettings() {
     thumbnailSize = parseInt(localStorage.getItem("thumbnailSize")) || 80;
     enlargedSize = parseInt(localStorage.getItem("enlargedSize")) || 300;
     document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
+    updateHistoryDisplay(); // 初始顯示歷史紀錄並更新列數
+    updateStorageSize(); // 初始顯示 storage 空間
 }
 
 // 調整機率（當數量歸零時平攤）
 function adjustProbabilities() {
-    const totalProbability = prizes.reduce((sum, prize) => sum + (prize.quantity > 0 ? prize.probability : 0), 0);
-    const remainingPrizes = prizes.filter(prize => prize.quantity > 0);
+    const totalProbability = prizes.reduce(function(sum, prize) {
+        return sum + (prize.quantity > 0 ? prize.probability : 0);
+    }, 0);
+    const remainingPrizes = prizes.filter(function(prize) {
+        return prize.quantity > 0;
+    });
     if (remainingPrizes.length === 0) return;
 
-    const zeroedPrizes = prizes.filter(prize => prize.quantity === 0);
+    const zeroedPrizes = prizes.filter(function(prize) {
+        return prize.quantity === 0;
+    });
     if (zeroedPrizes.length > 0) {
-        const redistributedProb = zeroedPrizes.reduce((sum, prize) => sum + prize.probability, 0) / remainingPrizes.length;
-        prizes.forEach(prize => {
+        const redistributedProb = zeroedPrizes.reduce(function(sum, prize) {
+            return sum + prize.probability;
+        }, 0) / remainingPrizes.length;
+        prizes.forEach(function(prize) {
             if (prize.quantity === 0) {
                 prize.probability = 0;
             } else {
@@ -33,6 +43,44 @@ function adjustProbabilities() {
             }
         });
     }
+}
+
+// 根據機率選擇貓臉 SVG 動畫
+function getCatFaceSVG(probability, bgColor, textColor) {
+    let svgClass, svgContent;
+    const defaultTextColor = textColor || '#000';
+    if (probability < 20) {
+        svgClass = 'sad';
+        svgContent = `
+            <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="${bgColor || '#fff'}" />
+                <circle cx="35" cy="40" r="10" fill="${defaultTextColor}" />
+                <circle cx="65" cy="40" r="10" fill="${defaultTextColor}" />
+                <path d="M 35 60 Q 50 70 65 60" fill="none" stroke="${defaultTextColor}" stroke-width="3" />
+            </svg>
+        `;
+    } else if (probability <= 50) {
+        svgClass = 'neutral';
+        svgContent = `
+            <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="${bgColor || '#fff'}" />
+                <line x1="30" y1="40" x2="40" y2="40" stroke="${defaultTextColor}" stroke-width="3" />
+                <line x1="60" y1="40" x2="70" y2="40" stroke="${defaultTextColor}" stroke-width="3" />
+                <line x1="35" y1="60" x2="65" y2="60" stroke="${defaultTextColor}" stroke-width="3" />
+            </svg>
+        `;
+    } else {
+        svgClass = 'happy';
+        svgContent = `
+            <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="${bgColor || '#fff'}" />
+                <circle cx="35" cy="40" r="10" fill="${defaultTextColor}" />
+                <circle cx="65" cy="40" r="10" fill="${defaultTextColor}" />
+                <path d="M 35 60 Q 50 50 65 60" fill="none" stroke="${defaultTextColor}" stroke-width="3" />
+            </svg>
+        `;
+    }
+    return `<div class="${svgClass}">${svgContent}</div>`;
 }
 
 // 抽獎函數
@@ -44,7 +92,9 @@ function draw(times) {
     }
 
     let result = [];
-    let totalProbability = prizes.reduce((sum, prize) => sum + (prize.quantity > 0 ? prize.probability : 0), 0);
+    let totalProbability = prizes.reduce(function(sum, prize) {
+        return sum + (prize.quantity > 0 ? prize.probability : 0);
+    }, 0);
     if (totalProbability <= 0 || prizes.length === 0) {
         Swal.fire('獎池為空或所有獎項已抽完！', '請在設置中添加獎項', 'warning');
         return;
@@ -60,29 +110,43 @@ function draw(times) {
                     prize.quantity -= 1;
                     result.push({ ...prize, player: playerName });
                     adjustProbabilities();
-                    totalProbability = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
+                    totalProbability = prizes.reduce(function(sum, p) {
+                        return sum + (p.quantity > 0 ? p.probability : 0);
+                    }, 0);
                     break;
                 }
             }
         }
     }
 
-    const resultDiv = document.getElementById("result");
-    if (resultDiv) {
-        resultDiv.innerHTML = "";
-        result.forEach(item => {
-            const div = document.createElement("div");
-            div.className = "result-item";
-            div.style.color = item.textColor || '#333';
-            div.style.backgroundColor = item.bgColor || '#fff';
-            div.innerHTML = `<img src="${item.image}" alt="${item.name}"><span>${item.customText || item.name}</span>`;
-            div.addEventListener("click", () => showEnlargedImage(item.image, item.customText || item.name));
-            resultDiv.appendChild(div);
-        });
-    }
+    const minProbPrize = result.reduce(function(min, current) {
+        return current.probability < min.probability ? current : min;
+    }, result[0]);
 
-    saveToHistory(result);
-    updateHistoryDisplay();
+    const animationContainer = document.getElementById("animation-container");
+    animationContainer.innerHTML = getCatFaceSVG(minProbPrize.probability, minProbPrize.bgColor, minProbPrize.textColor);
+
+    setTimeout(function() {
+        const resultDiv = document.getElementById("result");
+        if (resultDiv) {
+            resultDiv.innerHTML = "";
+            result.forEach(function(item) {
+                const div = document.createElement("div");
+                div.className = "result-item";
+                div.style.color = item.textColor || '#333';
+                div.style.backgroundColor = item.bgColor || '#fff';
+                div.innerHTML = `<img src="${item.image}" alt="${item.name}" style="max-width: 100%; height: auto;">`;
+                div.addEventListener("click", function() {
+                    showEnlargedImage(item.image, item.customText || item.name);
+                });
+                resultDiv.appendChild(div);
+            });
+        }
+        saveToHistory(result);
+        updateHistoryDisplay(); // 抽獎後更新歷史紀錄和筆數
+        updateStorageSize(); // 更新儲存空間顯示
+        animationContainer.innerHTML = '';
+    }, 2000);
 }
 
 // 顯示放大圖片
@@ -105,7 +169,7 @@ function saveToHistory(result) {
     const timestamp = new Date().toLocaleString();
 
     history.unshift({ isSeparator: true });
-    result.forEach(item => {
+    result.forEach(function(item) {
         history.unshift({
             name: item.name,
             player: item.player,
@@ -118,8 +182,8 @@ function saveToHistory(result) {
     });
     history.unshift({ isSeparator: true });
 
-    if (history.length > 50) {
-        history = history.slice(0, 50);
+    if (history.length > 1000) {
+        history = history.slice(0, 1000);
     }
     try {
         localStorage.setItem("lotteryHistory", JSON.stringify(history));
@@ -130,32 +194,143 @@ function saveToHistory(result) {
             history = [];
         }
     }
+    updateHistoryDisplay(); // 保存後更新歷史紀錄和筆數
+    updateStorageSize(); // 保存後更新儲存空間顯示
 }
 
-// 更新歷史紀錄顯示
-function updateHistoryDisplay() {
+// 更新歷史紀錄顯示（確保即時更新筆數）
+function updateHistoryDisplay(searchQuery) {
+    if (typeof searchQuery === 'undefined' || searchQuery === null) {
+        searchQuery = '';
+    }
+    
     const historyDiv = document.getElementById("history");
     if (historyDiv) {
         const history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
-        historyDiv.innerHTML = "";
-        history.forEach(item => {
-            const div = document.createElement("div");
+        let filteredHistory = history;
+
+        // 過濾歷史紀錄
+        if (searchQuery.trim()) {
+            const query = searchQuery.trim().toLowerCase();
+            filteredHistory = history.filter(function(item) {
+                if (item.isSeparator) return false;
+                return item.player.toLowerCase().includes(query) || 
+                       (item.customText || item.name).toLowerCase().includes(query);
+            });
+        }
+
+        let html = `
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>抽獎者</th>
+                        <th>獎項</th>
+                        <th>時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        filteredHistory.forEach(function(item) {
             if (item.isSeparator) {
-                div.className = "history-item separator";
+                html += '<tr class="separator"><td colspan="3"></td></tr>';
             } else {
-                div.className = "history-item";
-                div.style.color = item.textColor || '#333';
-                div.style.backgroundColor = item.bgColor || 'transparent';
-                div.innerHTML = `<span>${item.player} 抽到 ${item.customText || item.name} - ${item.time}</span>`;
-                const prize = prizes.find(p => p.name === item.name);
-                if (prize) {
-                    div.addEventListener("click", () => showEnlargedImage(prize.image, item.customText || item.name));
+                html += `
+                    <tr style="color: ${item.textColor || '#333'}">
+                        <td>${item.player}</td>
+                        <td>${item.customText || item.name}</td>
+                        <td>${item.time}</td>
+                    </tr>
+                `;
+            }
+        });
+        html += '</tbody></table>';
+        historyDiv.innerHTML = html;
+
+        filteredHistory.forEach(function(item, index) {
+            if (!item.isSeparator) {
+                const row = historyDiv.querySelector(`tbody tr:nth-child(${index + 1})`);
+                const prize = prizes.find(function(p) { return p.name === item.name; });
+                if (row && prize) {
+                    row.addEventListener("click", function() {
+                        showEnlargedImage(prize.image, item.customText || item.name);
+                    });
                 }
             }
-            historyDiv.appendChild(div);
         });
     }
+
+    // 更新歷史紀錄列數（即時計算）
+    const history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
+    const recordCount = history.filter(function(item) { return !item.isSeparator; }).length;
+    const recordCountElement = document.getElementById("record-count");
+    if (recordCountElement) {
+        // recordCountElement.textContent = `歷史紀錄: ${recordCount} 筆`;
+    }
 }
+
+// 監聽搜尋輸入
+document.getElementById("history-search")?.addEventListener("input", function(e) {
+    const searchQuery = (e.target).value;
+    updateHistoryDisplay(searchQuery);
+});
+
+// 計算並顯示 localStorage 使用空間
+function updateStorageSize() {
+    let total = 0;
+    for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+            total += ((localStorage[key].length + key.length) * 2); // 每個字元約 2 字節
+        }
+    }
+    const sizeInKB = (total / 1024).toFixed(2);
+    const sizeInMB = (total / (1024 * 1024)).toFixed(2);
+    const storageSizeElement = document.getElementById("storage-size");
+    if (storageSizeElement) {
+        storageSizeElement.textContent = `紀錄使用空間: ${sizeInKB} KB (${sizeInMB} MB)`;
+    }
+}
+
+// 複製歷史紀錄到剪貼簿
+function copyHistoryToClipboard() {
+    const history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
+    let csvContent = "抽獎者,獎項,時間\n";
+    
+    history.forEach(function(item) {
+        if (!item.isSeparator) {
+            csvContent += `${item.player},${item.customText || item.name},${item.time}\n`;
+        }
+    });
+
+    navigator.clipboard.writeText(csvContent).then(function() {
+        Swal.fire('成功！', '歷史紀錄已複製到剪貼簿，可貼至 Excel。', 'success');
+    }).catch(function(err) {
+        Swal.fire('錯誤！', '複製失敗，請檢查瀏覽器權限。', 'error');
+    });
+    updateHistoryDisplay(); // 確保更新筆數顯示
+}
+
+// 匯出歷史紀錄為 Excel 檔案
+function exportHistoryToExcel() {
+    const history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
+    const data = history.filter(function(item) { return !item.isSeparator; }).map(function(item) {
+        return {
+            抽獎者: item.player,
+            獎項: item.customText || item.name,
+            時間: item.time
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "LotteryHistory");
+    XLSX.writeFile(wb, "lottery_history.xlsx");
+    Swal.fire('成功！', '歷史紀錄已匯出為 Excel 檔案。', 'success');
+    updateHistoryDisplay(); // 確保更新筆數顯示
+}
+
+// 綁定按鈕事件
+document.getElementById("copy-btn")?.addEventListener("click", copyHistoryToClipboard);
+document.getElementById("export-btn")?.addEventListener("click", exportHistoryToExcel);
 
 // 清空歷史紀錄
 function clearHistory() {
@@ -166,10 +341,11 @@ function clearHistory() {
         showCancelButton: true,
         confirmButtonText: '確定',
         cancelButtonText: '取消'
-    }).then(result => {
+    }).then(function(result) {
         if (result.isConfirmed) {
             localStorage.removeItem("lotteryHistory");
-            updateHistoryDisplay();
+            updateHistoryDisplay(); // 清空後更新歷史紀錄和筆數
+            updateStorageSize(); // 清空後更新儲存空間顯示
             Swal.fire('歷史紀錄已清空！', '', 'success');
         }
     });
@@ -190,7 +366,7 @@ function showAddPrizeModal() {
         showCancelButton: true,
         confirmButtonText: '添加',
         cancelButtonText: '取消',
-        preConfirm: () => {
+        preConfirm: function() {
             const fileInput = document.getElementById("prize-image");
             const probability = parseFloat(document.getElementById("new-prob").value) || 10;
             const quantity = parseInt(document.getElementById("new-qty").value) || 5;
@@ -199,20 +375,20 @@ function showAddPrizeModal() {
             const bgColor = document.getElementById("bg-color").value;
 
             if (!fileInput.files || fileInput.files.length === 0) {
-                Swal.showValidationMessage('請選擇一個圖片檔案！');
+                Swal.fire('請選擇一個圖片檔案！', '', 'warning');
                 return;
             }
 
             const file = fileInput.files[0];
             const fileName = file.name.toLowerCase();
             if (!fileName.endsWith('.png') && !fileName.endsWith('.jpg')) {
-                Swal.showValidationMessage('僅支援 .png 或 .jpg 格式！');
+                Swal.fire('僅支援 .png 或 .jpg 格式！', '', 'warning');
                 return;
             }
 
             const reader = new FileReader();
-            return new Promise((resolve) => {
-                reader.onload = (e) => {
+            return new Promise(function(resolve) {
+                reader.onload = function(e) {
                     const name = file.name.split('.')[0];
                     prizes.push({
                         name: name,
@@ -229,7 +405,7 @@ function showAddPrizeModal() {
                 reader.readAsDataURL(file);
             });
         }
-    }).then(result => {
+    }).then(function(result) {
         if (result.isConfirmed) {
             Swal.fire('獎項已添加！', '', 'success');
         }
@@ -238,57 +414,121 @@ function showAddPrizeModal() {
 
 // 隨機分配機率
 function distributeProbabilities() {
-    const total = prizes.reduce((sum, prize) => sum + prize.probability, 0);
-    if (total >= 100) return;
+    const currentTotal = prizes.reduce(function(sum, prize) {
+        return sum + prize.probability;
+    }, 0);
+    if (currentTotal === 0) return;
 
-    const remaining = 100 - total;
-    const activePrizes = prizes.filter(p => p.quantity > 0);
-    if (activePrizes.length === 0) return;
-
-    const baseIncrement = remaining / activePrizes.length;
-    activePrizes.forEach(prize => {
-        const randomAdjust = (Math.random() - 0.5) * baseIncrement * 0.2;
-        prize.probability += baseIncrement + randomAdjust;
-        if (prize.probability < 0) prize.probability = 0;
+    const scaleFactor = 100 / currentTotal;
+    prizes.forEach(function(prize) {
+        if (prize.quantity > 0) {
+            prize.probability = parseFloat((prize.probability * scaleFactor).toFixed(2));
+        } else {
+            prize.probability = 0;
+        }
     });
 
-    const newTotal = prizes.reduce((sum, prize) => sum + prize.probability, 0);
-    const adjustment = (100 - newTotal) / activePrizes.length;
-    activePrizes.forEach(prize => prize.probability += adjustment);
+    const finalTotal = prizes.reduce(function(sum, prize) {
+        return sum + prize.probability;
+    }, 0);
+    if (finalTotal !== 100) {
+        const diff = 100 - finalTotal;
+        const activePrizes = prizes.filter(function(p) {
+            return p.quantity > 0;
+        });
+        if (activePrizes.length > 0) {
+            activePrizes[0].probability += diff;
+        }
+    }
 
-    document.querySelectorAll(".swal2-modal .prob-input").forEach(input => {
+    document.querySelectorAll(".swal2-modal .prob-input").forEach(function(input) {
         const index = input.getAttribute("data-index");
         input.value = prizes[index].probability.toFixed(2);
     });
 
-    const updatedTotal = prizes.reduce((sum, prize) => sum + prize.probability, 0);
+    const updatedTotal = prizes.reduce(function(sum, prize) {
+        return sum + prize.probability;
+    }, 0);
     document.getElementById("probability-warning").textContent = 
-        updatedTotal !== 100 ? `注意：目前總機率為 ${updatedTotal.toFixed(2)}%，已自動調整` : "總機率為 100%";
+        updatedTotal === 100 ? "總機率為 100%" : `注意：目前總機率為 ${updatedTotal.toFixed(2)}%，請調整至 100%`;
+}
+
+// 按比例調整機率至 100%
+function adjustProbabilitiesTo100() {
+    const currentTotal = prizes.reduce(function(sum, prize) {
+        return sum + prize.probability;
+    }, 0);
+    if (currentTotal === 0) return;
+
+    const scaleFactor = 100 / currentTotal;
+    prizes.forEach(function(prize) {
+        if (prize.quantity > 0) {
+            prize.probability = parseFloat((prize.probability * scaleFactor).toFixed(2));
+        } else {
+            prize.probability = 0;
+        }
+    });
+
+    const finalTotal = prizes.reduce(function(sum, prize) {
+        return sum + prize.probability;
+    }, 0);
+    if (finalTotal !== 100) {
+        const diff = 100 - finalTotal;
+        const activePrizes = prizes.filter(function(p) {
+            return p.quantity > 0;
+        });
+        if (activePrizes.length > 0) {
+            activePrizes[0].probability += diff;
+        }
+    }
+
+    document.querySelectorAll(".swal2-modal .prob-input").forEach(function(input) {
+        const index = input.getAttribute("data-index");
+        input.value = prizes[index].probability.toFixed(2);
+    });
 }
 
 // 顯示設置彈窗
-document.getElementById("settings-btn").addEventListener("click", () => {
+document.getElementById("settings-btn").addEventListener("click", function() {
     let html = '<h3>調整獎項設置</h3>';
-    html += '<div class="prize-list">';
-    prizes.forEach((prize, index) => {
+    html += `
+        <table class="prize-table">
+            <thead>
+                <tr>
+                    <th>選取</th>
+                    <th>名稱</th>
+                    <th>機率 (%)</th>
+                    <th>數量</th>
+                    <th>顯示文字</th>
+                    <th>文字顏色</th>
+                    <th>背景顏色</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    prizes.forEach(function(prize, index) {
         html += `
-            <div class="prize-item">
-                <input type="checkbox" class="delete-check" data-index="${index}">
-                ${prize.name}: 
-                <input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"> % | 
-                數量: <input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"> | 
-                文字: <input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"> | 
-                文字顏色: <input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"> | 
-                背景顏色: <input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input">
-            </div>`;
+            <tr>
+                <td><input type="checkbox" class="delete-check" data-index="${index}"></td>
+                <td>${prize.name}</td>
+                <td><input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"></td>
+                <td><input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"></td>
+                <td><input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"></td>
+                <td><input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"></td>
+                <td><input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input"></td>
+            </tr>
+        `;
     });
-    html += '</div>';
-    html += '<button type="button" onclick="deleteSelectedPrizes()" class="action-btn">刪除選中</button>';
-    html += '<button type="button" onclick="showAddPrizeModal()" class="action-btn">增加獎池</button>';
-    html += '<button type="button" onclick="distributeProbabilities()" class="action-btn">分配機率</button>';
-    html += `<div>縮圖尺寸 (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>`;
-    html += `<div>放大尺寸 (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>`;
-    html += `<p id="probability-warning"></p>`;
+    html += `
+            </tbody>
+        </table>
+        <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">刪除選中</button>
+        <button type="button" onclick="showAddPrizeModal()" class="action-btn">增加獎池</button>
+        <button type="button" onclick="distributeProbabilities()" class="action-btn">分配機率</button>
+        <div>縮圖尺寸 (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
+        <div>放大尺寸 (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
+        <p id="probability-warning"></p>
+    `;
 
     Swal.fire({
         html: html,
@@ -296,36 +536,48 @@ document.getElementById("settings-btn").addEventListener("click", () => {
         confirmButtonText: '保存',
         cancelButtonText: '取消',
         focusConfirm: false,
-        width: '1200px',
-        preConfirm: () => {
+        width: '900px',
+        preConfirm: function() {
             const probInputs = document.querySelectorAll(".swal2-modal .prob-input");
             const qtyInputs = document.querySelectorAll(".swal2-modal .qty-input");
             const textInputs = document.querySelectorAll(".swal2-modal .text-input");
             const textColorInputs = document.querySelectorAll(".swal2-modal [data-text-color-index]");
             const bgColorInputs = document.querySelectorAll(".swal2-modal [data-bg-color-index]");
-            probInputs.forEach(input => {
+
+            probInputs.forEach(function(input) {
                 const index = input.getAttribute("data-index");
-                const value = parseFloat(input.value) || 0;
-                prizes[index].probability = value;
+                prizes[index].probability = parseFloat(input.value) || 0;
             });
-            qtyInputs.forEach(input => {
+            qtyInputs.forEach(function(input) {
                 const index = input.getAttribute("data-qty-index");
-                const value = parseInt(input.value) || 0;
-                prizes[index].quantity = value;
+                prizes[index].quantity = parseInt(input.value) || 0;
             });
-            textInputs.forEach(input => {
+            textInputs.forEach(function(input) {
                 const index = input.getAttribute("data-text-index");
-                const value = input.value.trim();
-                prizes[index].customText = value || prizes[index].name;
+                prizes[index].customText = input.value.trim() || prizes[index].name;
             });
-            textColorInputs.forEach(input => {
+            textColorInputs.forEach(function(input) {
                 const index = input.getAttribute("data-text-color-index");
                 prizes[index].textColor = input.value;
             });
-            bgColorInputs.forEach(input => {
+            bgColorInputs.forEach(function(input) {
                 const index = input.getAttribute("data-bg-color-index");
                 prizes[index].bgColor = input.value;
             });
+
+            const total = prizes.reduce(function(sum, prize) {
+                return sum + prize.probability;
+            }, 0);
+            if (total !== 100) {
+                Swal.fire({
+                    title: '機率總和不等於 100%！',
+                    text: `當前總機率為 ${total.toFixed(2)}%，請點擊「分配機率」按鈕調整至 100%。`,
+                    icon: 'warning',
+                    confirmButtonText: '確定'
+                });
+                return false;
+            }
+
             thumbnailSize = parseInt(document.getElementById("thumbnail-size").value) || 80;
             enlargedSize = parseInt(document.getElementById("enlarged-size").value) || 300;
             localStorage.setItem("prizes", JSON.stringify(prizes));
@@ -334,45 +586,54 @@ document.getElementById("settings-btn").addEventListener("click", () => {
             document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
             adjustProbabilities();
         }
-    }).then(result => {
+    }).then(function(result) {
         if (result.isConfirmed) {
             Swal.fire('設置已保存！', '', 'success');
         }
     });
 
-    const total = prizes.reduce((sum, prize) => sum + (prize.quantity > 0 ? prize.probability : 0), 0);
+    const total = prizes.reduce(function(sum, prize) {
+        return sum + (prize.quantity > 0 ? prize.probability : 0);
+    }, 0);
     document.getElementById("probability-warning").textContent = 
-        total !== 100 ? `注意：目前總機率為 ${total}%，可點擊“分配機率”調整` : "總機率為 100%";
+        total === 100 ? "總機率為 100%" : `注意：目前總機率為 ${total.toFixed(2)}%，請調整至 100%`;
 });
 
 // 刪除選中獎項
 function deleteSelectedPrizes() {
     const checkboxes = document.querySelectorAll(".swal2-modal .delete-check:checked");
-    const indicesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute("data-index")));
+    const indicesToDelete = Array.from(checkboxes).map(function(cb) {
+        return parseInt(cb.getAttribute("data-index"));
+    });
     if (indicesToDelete.length === 0) {
         Swal.showValidationMessage('請至少選中一個獎項！');
         return;
     }
 
-    prizes = prizes.filter((_, index) => !indicesToDelete.includes(index));
-    Swal.getPopup().querySelector(".prize-list").innerHTML = prizes.map((prize, index) => `
-        <div class="prize-item">
-            <input type="checkbox" class="delete-check" data-index="${index}">
-            ${prize.name}: 
-            <input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"> % | 
-            數量: <input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"> | 
-            文字: <input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"> | 
-            文字顏色: <input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"> | 
-            背景顏色: <input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input">
-        </div>
-    `).join('');
+    prizes = prizes.filter(function(_, index) {
+        return !indicesToDelete.includes(index);
+    });
+    Swal.getPopup().querySelector(".prize-table tbody").innerHTML = prizes.map(function(prize, index) {
+        return `
+            <tr>
+                <td><input type="checkbox" class="delete-check" data-index="${index}"></td>
+                <td>${prize.name}</td>
+                <td><input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"></td>
+                <td><input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"></td>
+                <td><input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"></td>
+                <td><input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"></td>
+                <td><input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input"></td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // 暴露全局函數
 window.globalFunctions = {
     showAddPrizeModal: showAddPrizeModal,
     deleteSelectedPrizes: deleteSelectedPrizes,
-    distributeProbabilities: distributeProbabilities
+    distributeProbabilities: distributeProbabilities,
+    adjustProbabilitiesTo100: adjustProbabilitiesTo100
 };
 
 // 頁面加載時初始化

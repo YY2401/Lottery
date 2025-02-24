@@ -193,3 +193,317 @@ button:hover {
     margin: 10px 0;
     height: 0; /* 僅顯示底線 */
 }
+
+.prize-table, .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.prize-table th, .prize-table td,
+.history-table th, .history-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+
+.prize-table th, .history-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.prize-table input[type="number"],
+.prize-table input[type="text"],
+.prize-table input[type="color"] {
+    width: 80px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.history-table .separator td {
+    border-bottom: 2px solid #333;
+    padding: 0;
+    height: 2px;
+    background-color: #ddd;
+}
+
+/* 調整 result-item */
+.result-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    animation: scaleIn 0.3s ease-out;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.input-section {
+    margin: 20px 0;
+    text-align: center;
+}
+
+#wheel {
+    margin: 20px auto;
+    display: block;
+}
+
+.input-section label {
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+.input-section input[type="text"] {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 200px;
+}
+
+.input-section {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+
+#wheel {
+    margin: 20px auto;
+    display: block;
+}
+
+.input-section {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+
+.animation-container {
+    width: 300px;
+    height: 300px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* SVG 動畫樣式 */
+.low-prob svg {
+    animation: sparkle 2s ease-in-out forwards;
+}
+
+.mid-prob svg {
+    animation: spin 2s ease-in-out forwards;
+}
+
+.high-prob svg {
+    animation: wave 2s ease-in-out forwards;
+}
+
+@keyframes sparkle {
+    0% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1.2); }
+    100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes wave {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0); }
+}
+
+.input-section {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+
+.animation-container {
+    width: 300px;
+    height: 300px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* SVG 動畫樣式 */
+.sad svg {
+    animation: shake 2s ease-in-out forwards;
+}
+
+.neutral svg {
+    animation: blink 2s ease-in-out forwards;
+}
+
+.happy svg {
+    animation: bounce 2s ease-in-out forwards;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+@keyframes blink {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.1); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.history-section {
+    margin: 20px 0;
+}
+
+.history-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.history-table th, .history-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+
+.history-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.history-table .separator td {
+    border-bottom: 2px solid #333;
+    padding: 0;
+    height: 2px;
+    background-color: #ddd;
+}
+
+/* 顏色塊樣式 */
+.color-square {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.history-section {
+    margin: 20px 0;
+    position: relative;
+}
+
+.history-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.storage-size {
+    position: absolute;
+    right: 0;
+    top: 100;
+    font-size: 14px;
+    color: #666;
+}
+
+#copy-btn {
+    margin-left: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#copy-btn:hover {
+    background-color: #45a049;
+}
+.history-section {
+    margin: 20px 0;
+    position: relative;
+}
+
+.history-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.storage-size {
+    position: absolute;
+    right: 0;
+    top: 20px; /* 向下偏移，與 record-count 隔開 */
+    font-size: 14px;
+    color: #666;
+}
+
+.record-count {
+    position: absolute;
+    right: 0;
+    top: 0; /* 保持在上方 */
+    font-size: 14px;
+    color: #666;
+}
+
+#copy-btn {
+    margin-left: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#copy-btn:hover {
+    background-color: #45a049;
+}
+
+#export-btn {
+    margin-left: 10px;
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#export-btn:hover {
+    background-color: #1976D2;
+}

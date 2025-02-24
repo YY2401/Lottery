@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>抽獎</title>
+    <title>Lottery</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script> <!-- 添加 SheetJS -->
 </head>
 <body>
-    <h1>抽獎</h1>
+    <h1>Lottery</h1>
     <div class="input-section">
-        <label for="player-name"></label>
-        <input type="text" id="player-name" placeholder="是誰">
+        <div id="animation-container" class="animation-container"></div>
+        <label for="player-name">抽獎者名稱：</label>
+        <input type="text" id="player-name" placeholder="請輸入名稱">
     </div>
     <div class="buttons">
         <button onclick="draw(1)">單抽</button>
@@ -19,9 +21,16 @@
         <button onclick="draw(10)">十連抽</button>
     </div>
     <div id="result" class="result"></div>
-    <h2>紀錄</h2>
-    <div id="history" class="history"></div>
+    <h2>歷史紀錄</h2>
+    <div class="history-section">
+        <input type="text" id="history-search" class="history-search" placeholder="搜尋抽獎者或獎項">
+        <span id="record-count" class="record-count"></span>
+        <span id="storage-size" class="storage-size">localStorage 使用空間: 0 KB</span>
+        <div id="history" class="history"></div>
+    </div>
     <button onclick="clearHistory()" class="clear-btn">清空紀錄</button>
+    <button id="copy-btn" class="clear-btn">複製到剪貼簿</button>
+    <button id="export-btn" class="clear-btn">匯出 Excel</button>
     <button id="settings-btn" class="settings-btn">設置</button>
     <script src="script.js"></script>
 </body>
