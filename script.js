@@ -649,7 +649,7 @@ document.getElementById("settings-btn").addEventListener("click", () => {
         confirmButtonText:'保存',
         cancelButtonText:'取消',
         focusConfirm:false,
-        width:'900px',
+        width:'70%',
         preConfirm: () => {
             // 更新表單資料
             const probInputs  = document.querySelectorAll(".swal2-modal .prob-input");
