@@ -62,13 +62,6 @@ function draw(times) {
         }
     }
 
-    // 以抽到機率最小的獎項決定貓臉
-    const minProb = drawResult.reduce((min, cur) => cur.probability < min.probability ? cur : min, drawResult[0]);
-    document.getElementById("animation-container").innerHTML = getCatFaceSVG(
-        minProb.probability,
-        minProb.bgColor,
-        minProb.textColor
-    );
 
     // 顯示結果到 #result
     const resultDiv = document.getElementById("result");
@@ -103,8 +96,16 @@ function draw(times) {
                 });
             }
         } else {
-            // 預設 "name"
+            // displayMode === "name"
             div.innerHTML = `<div class="result-text">${item.customText || item.name}</div>`;
+            
+            // 如果獎項有圖片，則可透過點擊彈出視窗
+            if (item.image && item.image.trim() !== "") {
+                div.addEventListener("click", () => {
+                    showEnlargedImage(item.image, item.customText || item.name);
+                });
+                div.style.cursor = "pointer";
+            }
         }
         resultDiv.appendChild(div);
     });
@@ -115,45 +116,6 @@ function draw(times) {
     updateStorageSize();
 }
 
-// --------------------
-// cat face SVG
-// --------------------
-function getCatFaceSVG(prob, bgColor, txtColor) {
-    let svgClass, svgContent;
-    const defaultText = txtColor || '#000';
-    if (prob < 20) {
-        svgClass = 'sad';
-        svgContent = `
-          <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="${bgColor||'#fff'}"/>
-            <circle cx="35" cy="40" r="10" fill="${defaultText}"/>
-            <circle cx="65" cy="40" r="10" fill="${defaultText}"/>
-            <path d="M 35 60 Q 50 70 65 60" fill="none" stroke="${defaultText}" stroke-width="3"/>
-          </svg>
-        `;
-    } else if (prob <= 50) {
-        svgClass = 'neutral';
-        svgContent = `
-          <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="${bgColor||'#fff'}"/>
-            <line x1="30" y1="40" x2="40" y2="40" stroke="${defaultText}" stroke-width="3"/>
-            <line x1="60" y1="40" x2="70" y2="40" stroke="${defaultText}" stroke-width="3"/>
-            <line x1="35" y1="60" x2="65" y2="60" stroke="${defaultText}" stroke-width="3"/>
-          </svg>
-        `;
-    } else {
-        svgClass = 'happy';
-        svgContent = `
-          <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="${bgColor||'#fff'}"/>
-            <circle cx="35" cy="40" r="10" fill="${defaultText}"/>
-            <circle cx="65" cy="40" r="10" fill="${defaultText}"/>
-            <path d="M 35 60 Q 50 50 65 60" fill="none" stroke="${defaultText}" stroke-width="3"/>
-          </svg>
-        `;
-    }
-    return `<div class="${svgClass}">${svgContent}</div>`;
-}
 
 // --------------------
 // 放大圖片 (SweetAlert2)
