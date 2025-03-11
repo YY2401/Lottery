@@ -1,4 +1,4 @@
-/* ---- 主要全域樣式 ---- */
+/* ---- 基本樣式 ---- */
 body {
     font-family: Arial, sans-serif;
     text-align: center;
@@ -79,12 +79,12 @@ button:hover {
 }
 
 .result-item {
-    display: inline-flex;      /* 文字 + 縮圖 同行排列 */
+    display: inline-flex;      /* 文字 + 縮圖 同行 */
     align-items: center;
     gap: 8px;                  /* 文字和縮圖間距 */
     padding: 8px;
     border-radius: 6px;
-    cursor: default;           /* 無圖時不需要指標手形 */
+    cursor: default;
     animation: scaleIn 0.3s ease-out; /* 抽獎時彈出動畫 */
 }
 
@@ -93,14 +93,12 @@ button:hover {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* 文字樣式 (顯示文字) */
 .result-text {
     font-size: 16px;
     font-weight: bold;
-    white-space: nowrap; /* 避免換行 */
+    white-space: nowrap;       /* 避免換行 */
 }
 
-/* 縮圖樣式 (有圖才顯示) */
 .result-thumbnail {
     max-width: 50px;
     max-height: 50px;

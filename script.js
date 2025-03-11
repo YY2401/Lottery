@@ -44,7 +44,7 @@ function draw(times) {
     let totalProbability = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
 
     if (totalProbability <= 0 || prizes.length === 0) {
-        Swal.fire('獎池為空或所有獎項已抽完！', '請在設置中添加獎項', 'warning');
+        Swal.fire('獎池為空或所有獎項已抽完！', '請在設置中添加或補充獎項', 'warning');
         return;
     }
 
@@ -58,14 +58,15 @@ function draw(times) {
                     p.quantity -= 1;
                     result.push({ ...p, player: playerName });
                     adjustProbabilities();
-                    totalProbability = prizes.reduce((s, x) => s + (x.quantity > 0 ? x.probability : 0), 0);
+                    totalProbability = prizes.reduce(
+                        (s, x) => s + (x.quantity > 0 ? x.probability : 0), 0
+                    );
                     break;
                 }
             }
         }
     }
 
-    // 使用 setTimeout (若保留動畫或其他效果)
     setTimeout(() => {
         displayDrawResult(result);
         saveToHistory(result);
@@ -75,7 +76,7 @@ function draw(times) {
 }
 
 // --------------------
-// 顯示抽獎結果 (重點修改處)
+// 顯示抽獎結果 (有圖縮圖 / 無圖純文字)
 // --------------------
 function displayDrawResult(result) {
     const resultDiv = document.getElementById("result");
@@ -88,30 +89,26 @@ function displayDrawResult(result) {
         const div = document.createElement("div");
         div.className = "result-item";
 
-        // 設置文字顏色和背景顏色 (若你想要 "item.bgColor" 覆蓋整塊)
+        // 設置文字顏色和背景顏色
         div.style.color = item.textColor || "#333";
         div.style.backgroundColor = item.bgColor || "#fff";
 
         // 文字區
-        // 若沒 customText 就用 item.name
         const textHtml = `<div class="result-text">${item.customText || item.name}</div>`;
 
         // 判斷是否有圖片
         if (item.image && item.image.trim() !== "") {
-            // 有圖片
+            // 有圖片 → 顯示文字 + 縮圖，點擊可放大
             const imgHtml = `<img src="${item.image}" alt="${item.name}" class="result-thumbnail">`;
             div.innerHTML = textHtml + imgHtml;
 
-            // 綁定點擊放大圖片
             div.addEventListener("click", () => {
                 showEnlargedImage(item.image, item.customText || item.name);
             });
-            // 如果想讓整個 div 都可點擊，可保留 cursor: pointer
-            div.style.cursor = "pointer";
+            div.style.cursor = "pointer"; 
         } else {
-            // 無圖片，僅顯示文字
+            // 無圖片 → 只顯示文字
             div.innerHTML = textHtml;
-            // 也可加一個預設 icon or text，但此處留白
         }
 
         resultDiv.appendChild(div);
@@ -354,6 +351,7 @@ function adjustProbabilities() {
 // 設定頁面（後臺）邏輯
 // --------------------
 document.getElementById("settings-btn").addEventListener("click", function() {
+    // 產生表格 HTML，含 "圖片" 欄位
     let html = `
         <h3>獎項設置</h3>
         <table class="prize-table">
@@ -366,11 +364,13 @@ document.getElementById("settings-btn").addEventListener("click", function() {
                     <th>顯示文字</th>
                     <th>文字顏色</th>
                     <th>背景顏色</th>
+                    <th>圖片</th>
                 </tr>
             </thead>
             <tbody>
     `;
     prizes.forEach((p, i) => {
+        const hasImage = p.image && p.image.trim() !== "" ? p.image : "";
         html += `
             <tr>
                 <td><input type="checkbox" class="delete-check" data-index="${i}"></td>
@@ -380,31 +380,33 @@ document.getElementById("settings-btn").addEventListener("click", function() {
                 <td><input type="text" value="${p.customText || p.name}" data-text-index="${i}" class="text-input"></td>
                 <td><input type="color" value="${p.textColor || '#333333'}" data-text-color-index="${i}" class="color-input"></td>
                 <td><input type="color" value="${p.bgColor || '#ffffff'}" data-bg-color-index="${i}" class="color-input"></td>
+                <td>
+                    <img src="${hasImage}" style="max-width:50px; max-height:50px;">
+                    <button type="button" class="upload-img-btn" data-index="${i}">上傳圖片</button>
+                </td>
             </tr>
         `;
     });
     html += `
             </tbody>
         </table>
-
         <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">刪除選中</button>
         <button type="button" onclick="showAddPrizeModal()" class="action-btn">增加獎池</button>
         <div>縮圖尺寸 (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
         <div>放大尺寸 (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
         <p id="probability-warning"></p>
-
-        <!-- 新增匯入/匯出 ZIP 按鈕 -->
         <button type="button" class="action-btn" onclick="exportDataAsZip()">匯出 ZIP</button>
         <button type="button" class="action-btn" onclick="importDataFromZipUI()">匯入 ZIP</button>
     `;
 
+    // 彈窗
     Swal.fire({
         html: html,
         showCancelButton: true,
         confirmButtonText: '保存',
         cancelButtonText: '取消',
         focusConfirm: false,
-        width: '900px',
+        width: '1000px',
         preConfirm: () => {
             const probInputs = document.querySelectorAll(".swal2-modal .prob-input");
             const qtyInputs = document.querySelectorAll(".swal2-modal .qty-input");
@@ -412,6 +414,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
             const textColorInputs = document.querySelectorAll(".swal2-modal [data-text-color-index]");
             const bgColorInputs = document.querySelectorAll(".swal2-modal [data-bg-color-index]");
 
+            // 依欄位更新
             probInputs.forEach(input => {
                 const index = input.getAttribute("data-index");
                 prizes[index].probability = parseFloat(input.value) || 0;
@@ -433,6 +436,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
                 prizes[index].bgColor = input.value;
             });
 
+            // 確認機率總合
             const total = prizes.reduce((sum, p) => sum + p.probability, 0);
             if (total !== 100) {
                 Swal.fire({
@@ -444,14 +448,15 @@ document.getElementById("settings-btn").addEventListener("click", function() {
                 return false;
             }
 
+            // 更新縮圖 / 放大尺寸
             thumbnailSize = parseInt(document.getElementById("thumbnail-size").value) || 80;
             enlargedSize = parseInt(document.getElementById("enlarged-size").value) || 300;
-
-            localStorage.setItem("prizes", JSON.stringify(prizes));
             localStorage.setItem("thumbnailSize", thumbnailSize);
             localStorage.setItem("enlargedSize", enlargedSize);
             document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
 
+            // 寫回 localStorage
+            localStorage.setItem("prizes", JSON.stringify(prizes));
             adjustProbabilities();
         }
     }).then(result => {
@@ -460,48 +465,95 @@ document.getElementById("settings-btn").addEventListener("click", function() {
         }
     });
 
+    // 顯示機率警告或提示
     const total = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
     const warnEl = document.getElementById("probability-warning");
     if (warnEl) {
         warnEl.textContent = (total === 100) 
-            ? "總機率為 100%" 
+            ? "總機率為 100%"
             : `注意：目前總機率為 ${total.toFixed(2)}%，請調整至 100%`;
     }
+
+    // 綁定「上傳圖片」按鈕事件 (在 SweetAlert 彈窗生成後)
+    bindUploadImgEvents();
 });
+
+// --------------------
+// 绑定「上傳圖片」的事件，更新 prize.image
+// --------------------
+function bindUploadImgEvents() {
+    const uploadButtons = document.querySelectorAll(".swal2-modal .upload-img-btn");
+    uploadButtons.forEach(btn => {
+        btn.addEventListener("click", function() {
+            const index = parseInt(btn.getAttribute("data-index"));
+            const fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.accept = ".png,.jpg,.jpeg";
+            fileInput.onchange = (e) => {
+                if (!fileInput.files || fileInput.files.length === 0) return;
+                const file = fileInput.files[0];
+                const fileName = file.name.toLowerCase();
+                if (!fileName.endsWith('.png') && !fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
+                    Swal.fire('支援 .png / .jpg / .jpeg 格式', '', 'warning');
+                    return;
+                }
+                // 讀取圖片 -> Base64
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    prizes[index].image = ev.target.result;
+                    // 立刻更新該列的 <img>
+                    const row = btn.closest("tr");
+                    const imgTag = row.querySelector("td img");
+                    if (imgTag) {
+                        imgTag.src = ev.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            fileInput.click();
+        });
+    });
+}
 
 // --------------------
 // 刪除選中獎項
 // --------------------
 function deleteSelectedPrizes() {
-    const checkedBoxes = document.querySelectorAll(".swal2-modal .delete-check:checked");
-    const indices = Array.from(checkedBoxes).map(cb => parseInt(cb.getAttribute("data-index")));
-
+    const checkboxes = document.querySelectorAll(".swal2-modal .delete-check:checked");
+    const indices = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute("data-index")));
     if (indices.length === 0) {
         Swal.showValidationMessage('請至少選中一個獎項！');
         return;
     }
-
     prizes = prizes.filter((_, i) => !indices.includes(i));
 
-    // 重新渲染 Swal 裡的表格
+    // 重新渲染表格
     const tbody = Swal.getPopup().querySelector(".prize-table tbody");
     if (tbody) {
-        tbody.innerHTML = prizes.map((p, i) => `
-            <tr>
-                <td><input type="checkbox" class="delete-check" data-index="${i}"></td>
-                <td>${p.name}</td>
-                <td><input type="number" min="0" max="100" value="${p.probability}" data-index="${i}" class="prob-input"></td>
-                <td><input type="number" min="0" value="${p.quantity}" data-qty-index="${i}" class="qty-input"></td>
-                <td><input type="text" value="${p.customText || p.name}" data-text-index="${i}" class="text-input"></td>
-                <td><input type="color" value="${p.textColor || '#333333'}" data-text-color-index="${i}" class="color-input"></td>
-                <td><input type="color" value="${p.bgColor || '#ffffff'}" data-bg-color-index="${i}" class="color-input"></td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = prizes.map((p, i) => {
+            const hasImage = p.image && p.image.trim() !== "" ? p.image : "";
+            return `
+                <tr>
+                    <td><input type="checkbox" class="delete-check" data-index="${i}"></td>
+                    <td>${p.name}</td>
+                    <td><input type="number" min="0" max="100" value="${p.probability}" data-index="${i}" class="prob-input"></td>
+                    <td><input type="number" min="0" value="${p.quantity}" data-qty-index="${i}" class="qty-input"></td>
+                    <td><input type="text" value="${p.customText || p.name}" data-text-index="${i}" class="text-input"></td>
+                    <td><input type="color" value="${p.textColor || '#333333'}" data-text-color-index="${i}" class="color-input"></td>
+                    <td><input type="color" value="${p.bgColor || '#ffffff'}" data-bg-color-index="${i}" class="color-input"></td>
+                    <td>
+                        <img src="${hasImage}" style="max-width:50px; max-height:50px;">
+                        <button type="button" class="upload-img-btn" data-index="${i}">上傳圖片</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        bindUploadImgEvents(); // 重新綁定事件
     }
 }
 
 // --------------------
-// 新增獎項
+// 新增獎項 (Modal)
 // --------------------
 function showAddPrizeModal() {
     Swal.fire({
@@ -517,7 +569,7 @@ function showAddPrizeModal() {
         showCancelButton: true,
         confirmButtonText: '添加',
         cancelButtonText: '取消',
-        preConfirm: () => {
+        preConfirm: function() {
             const fileInput = document.getElementById("prize-image");
             const probability = parseFloat(document.getElementById("new-prob").value) || 10;
             const quantity = parseInt(document.getElementById("new-qty").value) || 5;
@@ -526,7 +578,7 @@ function showAddPrizeModal() {
             const bgColor = document.getElementById("bg-color").value;
 
             if (!fileInput.files || fileInput.files.length === 0) {
-                Swal.fire('請選擇一個圖片檔案！', '', 'warning');
+                Swal.fire('請選擇圖片檔案！(若不想上傳圖片，可放預設空檔)', '', 'warning');
                 return false;
             }
 
@@ -538,9 +590,9 @@ function showAddPrizeModal() {
             }
 
             // 讀取圖片 -> Base64
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => {
+            const reader = new FileReader();
+            return new Promise(function(resolve) {
+                reader.onload = function(e) {
                     const name = file.name.split('.')[0];
                     prizes.push({
                         name: name,
@@ -572,13 +624,14 @@ async function exportDataAsZip() {
         const zip = new JSZip();
         const imagesFolder = zip.folder("images");
 
-        // 要寫入到 prizes.json 的物件：不放 Base64，改放 "圖片檔名"
+        // 要寫入 prizes.json 的物件：不放 base64，改放 "圖片檔名"
         const exportData = [];
 
         for (let i = 0; i < prizes.length; i++) {
             const p = prizes[i];
-            let match = p.image.match(/^data:(image\/\w+);base64,(.*)$/);
+            let match = p.image ? p.image.match(/^data:(image\/\w+);base64,(.*)$/) : null;
             if (!match) {
+                // 無圖片
                 exportData.push({
                     name: p.name,
                     probability: p.probability,
@@ -592,8 +645,6 @@ async function exportDataAsZip() {
             }
             const mimeType = match[1]; // e.g. "image/png"
             const base64Data = match[2];
-
-            // 檔名
             let ext = mimeType.split("/")[1]; // png / jpeg
             let fileName = `${p.name || 'prize'}_${i}.${ext}`;
             const imageBinary = b64ToUint8Array(base64Data);
