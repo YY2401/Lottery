@@ -780,7 +780,7 @@ document.getElementById("settings-btn").addEventListener("click", () => {
         confirmButtonText:'保存',
         cancelButtonText:'取消',
         focusConfirm:false,
-        width:'70%',
+        width:'1600px',
         preConfirm: async () => {
             // 讀取表單
             const probInputs  = document.querySelectorAll(".swal2-modal .prob-input");
