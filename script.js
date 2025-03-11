@@ -55,70 +55,39 @@ function draw(times) {
                     p.quantity--;
                     result.push({ ...p, player: playerName });
                     adjustProbabilities();
-                    totalProb = prizes.reduce((sum, x) => sum + (x.quantity > 0 ? x.probability : 0), 0);
+                    totalProbability = prizes.reduce((sum, x) => sum + (x.quantity > 0 ? x.probability : 0), 0);
                     break;
                 }
             }
         }
     }
 
-    // 以抽到機率最小的獎項決定貓臉
-    const minProb = result.reduce((min, cur) => cur.probability < min.probability ? cur : min, result[0]);
-    document.getElementById("animation-container").innerHTML = getCatFaceSVG(
-        minProb.probability,
-        minProb.bgColor,
-        minProb.textColor
-    );
-
-    // 顯示結果到 #result
-    const resultDiv = document.getElementById("result");
-    if (!resultDiv) return;
-    resultDiv.innerHTML = "";
-    result.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "result-item";
-        div.style.color = item.textColor || "#333";
-        div.style.backgroundColor = item.bgColor || "#fff";
-
-        // 根據 displayMode
-        if (item.displayMode === "image") {
-            if (item.image && item.image.trim() !== "") {
-                div.innerHTML = `<img src="${item.image}" alt="${item.name}">`;
+    // 顯示抽獎結果到畫面 (不再顯示貓臉表情)
+    setTimeout(() => {
+        const resultDiv = document.getElementById("result");
+        if (resultDiv) {
+            resultDiv.innerHTML = "";
+            result.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "result-item";
+                div.style.color = item.textColor || '#333';
+                div.style.backgroundColor = item.bgColor || '#fff';
+                div.innerHTML = `<img src="${item.image}" alt="${item.name}" style="max-width: 100%; height: auto;">`;
                 div.addEventListener("click", () => {
                     showEnlargedImage(item.image, item.customText || item.name);
                 });
-                div.style.cursor = "pointer";
-            } else {
-                div.innerHTML = `<div class="result-text">無圖片</div>`;
-            }
-        } else if (item.displayMode === "all") {
-            const imgPart = (item.image && item.image.trim() !== "")
-                ? `<img src="${item.image}" alt="${item.name}">`
-                : `<div class="result-text">無圖片</div>`;
-            const textPart = `<div class="result-text">${item.customText || item.name}</div>`;
-            div.innerHTML = imgPart + textPart;
-
-            if (item.image && item.image.trim() !== "") {
-                div.addEventListener("click", () => {
-                    showEnlargedImage(item.image, item.customText || item.name);
-                });
-                div.style.cursor = "pointer";
-            }
-        } else {
-            // 預設 "name"
-            div.innerHTML = `<div class="result-text">${item.customText || item.name}</div>`;
+                resultDiv.appendChild(div);
+            });
         }
-        resultDiv.appendChild(div);
-    });
-
-    // 寫入歷史紀錄
-    saveToHistory(result);
-    updateHistoryDisplay();
-    updateStorageSize();
+        // 存歷史紀錄
+        saveToHistory(result);
+        updateHistoryDisplay();
+        updateStorageSize();
+    }, 200);
 }
 
 // --------------------
-// cat face SVG
+// 顯示放大圖片
 // --------------------
 function getCatFaceSVG(prob, bgColor, txtColor) {
     let svgClass, svgContent;
@@ -204,6 +173,8 @@ function saveToHistory(result) {
             history = [];
         }
     }
+    updateHistoryDisplay();
+    updateStorageSize();
 }
 
 // --------------------
@@ -251,6 +222,26 @@ function updateHistoryDisplay(query) {
     });
     html += `</tbody></table>`;
     historyDiv.innerHTML = html;
+
+    // 點擊歷史紀錄可顯示對應圖片
+    filteredHistory.forEach((item, index) => {
+        if (!item.isSeparator) {
+            const row = historyDiv.querySelector(`tbody tr:nth-child(${index+1})`);
+            const foundPrize = prizes.find(p => p.name === item.name);
+            if (row && foundPrize) {
+                row.addEventListener("click", () => {
+                    showEnlargedImage(foundPrize.image, item.customText || item.name);
+                });
+            }
+        }
+    });
+
+    // 記錄筆數
+    const recordCount = history.filter(item => !item.isSeparator).length;
+    const recordCountElement = document.getElementById("record-count");
+    if (recordCountElement) {
+        // recordCountElement.textContent = `歷史紀錄: ${recordCount} 筆`;
+    }
 }
 document.getElementById("history-search")?.addEventListener("input", e => {
     updateHistoryDisplay(e.target.value);
@@ -470,20 +461,69 @@ function showAddPrizeModal() {
 // --------------------
 // 匯出獎項 -> Excel (只匯出prizes，不含歷史)
 // --------------------
-function exportPrizesToExcel() {
-    // 只要把 prizes 陣列中欄位轉成適合 Excel 就好
-    const data = prizes.map(p => ({
-        名稱: p.name,
-        機率: p.probability,
-        數量: p.quantity,
-        顯示文字: p.customText,
-        文字顏色: p.textColor,
-        背景顏色: p.bgColor,
-        顯示模式: p.displayMode
-    }));
-    if (typeof XLSX === "undefined") {
-        Swal.fire('錯誤','未加載 SheetJS','error');
-        return;
+async function exportDataAsZip() {
+    try {
+        const zip = new JSZip();
+        const imagesFolder = zip.folder("images");
+
+        // 要寫入到 prizes.json 的物件：不放 Base64，改放 "圖片檔名"
+        const exportData = [];
+
+        for (let i = 0; i < prizes.length; i++) {
+            const p = prizes[i];
+            let match = p.image.match(/^data:(image\/\w+);base64,(.*)$/);
+            if (!match) {
+                // 沒有圖片或不符合 base64
+                exportData.push({
+                    name: p.name,
+                    probability: p.probability,
+                    quantity: p.quantity,
+                    customText: p.customText,
+                    textColor: p.textColor,
+                    bgColor: p.bgColor,
+                    imageFile: ""
+                });
+                continue;
+            }
+            const mimeType = match[1]; // e.g. "image/png"
+            const base64Data = match[2];
+
+            // 檔名
+            let ext = mimeType.split("/")[1]; // png / jpeg
+            let fileName = `${p.name || 'prize'}_${i}.${ext}`;
+            const imageBinary = b64ToUint8Array(base64Data);
+
+            imagesFolder.file(fileName, imageBinary);
+
+            exportData.push({
+                name: p.name,
+                probability: p.probability,
+                quantity: p.quantity,
+                customText: p.customText,
+                textColor: p.textColor,
+                bgColor: p.bgColor,
+                imageFile: fileName
+            });
+        }
+
+        zip.file("prizes.json", JSON.stringify(exportData, null, 2));
+
+        const content = await zip.generateAsync({ type: "blob" });
+        const blobUrl = URL.createObjectURL(content);
+
+        // 下載
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = "prizes_export.zip";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+
+        Swal.fire("匯出成功", "已產生 ZIP 檔案供下載", "success");
+    } catch (error) {
+        console.error(error);
+        Swal.fire("錯誤", "匯出失敗，請查看主控台", "error");
     }
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -548,31 +588,32 @@ async function handlePrizesFile(file) {
         // 這裡示範 "清空再重建"
         prizes = [];
 
-        for (let i=1; i<jsonData.length; i++) {
-            const row = jsonData[i];
-            if (!row||!row.length) continue;
-
-            const nameVal = row[nameIdx];
-            const probVal = parseFloat(row[probIdx])||0;
-            const qtyVal  = parseInt(row[qtyIdx])||0;
-            const customText  = (textIdx>=0 && row[textIdx]) ? row[textIdx] : "";
-            const textColor   = (txtColorIdx>=0 && row[txtColorIdx]) ? row[txtColorIdx] : "#333333";
-            const bgColor     = (bgColorIdx>=0  && row[bgColorIdx])  ? row[bgColorIdx]  : "#ffffff";
-            const mode        = (modeIdx>=0     && row[modeIdx])     ? row[modeIdx]     : "name";
-
-            // 影像檔案需另外處理(此範例不含匯入圖片)
-            // 預設 image = ""
-            prizes.push({
-                name: String(nameVal),
-                probability: probVal,
-                quantity: qtyVal,
-                customText,
-                textColor,
-                bgColor,
-                displayMode: mode,
-                image: ""
+        const rebuiltPrizes = [];
+        for (let item of newPrizeData) {
+            let imageBase64 = "";
+            if (item.imageFile) {
+                const imageFileInZip = unzipped.file(`images/${item.imageFile}`);
+                if (imageFileInZip) {
+                    const binaryData = await imageFileInZip.async("uint8array");
+                    const mimeType = getMimeType(item.imageFile);
+                    const base64Str = uint8ArrayToBase64(binaryData, mimeType);
+                    imageBase64 = base64Str;
+                }
+            }
+            // 重建獎項
+            rebuiltPrizes.push({
+                name: item.name,
+                probability: item.probability,
+                quantity: item.quantity,
+                customText: item.customText,
+                textColor: item.textColor,
+                bgColor: item.bgColor,
+                image: imageBase64
             });
         }
+
+        // 直接覆蓋
+        prizes = rebuiltPrizes;
         localStorage.setItem("prizes", JSON.stringify(prizes));
         adjustProbabilities();
         Swal.fire('成功','已從Excel匯入獎項','success');
