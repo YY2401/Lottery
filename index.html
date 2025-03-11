@@ -4,22 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LOTTERY</title>
+    <!-- 主題樣式 -->
     <link rel="stylesheet" href="styles.css">
 
     <!-- SweetAlert2：彈窗提示 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- JSZip：壓縮/解壓套件 (本範例使用 CDN) -->
-    <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
-
-    <!-- 若需要匯出 Excel，請引入 SheetJS (可移除) -->
+    <!-- 若需匯出/匯入 Excel，請引入 SheetJS -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <h1>LOTTERY</h1>
 
     <div class="input-section">
-        <div id="animation-container" class="animation-container"></div>
         <label for="player-name">抽獎者名稱：</label>
         <input type="text" id="player-name" placeholder="請輸入名稱">
     </div>
@@ -30,7 +27,7 @@
         <button onclick="draw(10)">十連抽</button>
     </div>
 
-    <!-- 抽獎結果 -->
+    <!-- 抽獎結果容器 -->
     <div id="result" class="result"></div>
 
     <h2>歷史紀錄</h2>
