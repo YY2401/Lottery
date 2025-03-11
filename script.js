@@ -50,7 +50,7 @@ window.onload = () => {
         twitchBtn.addEventListener("click", async () => {
             // 1) 請使用者輸入頻道名稱
             const { value: channelName } = await Swal.fire({
-                title: '輸入 Twitch 頻道名稱',
+                title: 'brilio',
                 input: 'text',
                 inputPlaceholder: '例如：example_channel',
                 showCancelButton: true,
