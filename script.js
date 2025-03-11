@@ -1,7 +1,7 @@
 // 初始獎池（從 localStorage 加載或預設為空）
 let prizes = [];
 
-// 默认尺寸
+// 預設縮圖與放大圖尺寸
 let thumbnailSize = 80;
 let enlargedSize = 300;
 
@@ -14,8 +14,9 @@ function loadSettings() {
     thumbnailSize = parseInt(localStorage.getItem("thumbnailSize")) || 80;
     enlargedSize = parseInt(localStorage.getItem("enlargedSize")) || 300;
     document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
+
     updateHistoryDisplay(); // 初始顯示歷史紀錄並更新列數
-    updateStorageSize(); // 初始顯示 storage 空間
+    updateStorageSize();    // 初始顯示 storage 空間
 }
 
 // 調整機率（當數量歸零時平攤）
@@ -49,6 +50,7 @@ function adjustProbabilities() {
 function getCatFaceSVG(probability, bgColor, textColor) {
     let svgClass, svgContent;
     const defaultTextColor = textColor || '#000';
+
     if (probability < 20) {
         svgClass = 'sad';
         svgContent = `
@@ -119,12 +121,17 @@ function draw(times) {
         }
     }
 
+    // 以抽到機率最小的獎項來決定貓臉表情
     const minProbPrize = result.reduce(function(min, current) {
         return current.probability < min.probability ? current : min;
     }, result[0]);
 
     const animationContainer = document.getElementById("animation-container");
-    animationContainer.innerHTML = getCatFaceSVG(minProbPrize.probability, minProbPrize.bgColor, minProbPrize.textColor);
+    animationContainer.innerHTML = getCatFaceSVG(
+        minProbPrize.probability, 
+        minProbPrize.bgColor, 
+        minProbPrize.textColor
+    );
 
     setTimeout(function() {
         const resultDiv = document.getElementById("result");
@@ -144,7 +151,7 @@ function draw(times) {
         }
         saveToHistory(result);
         updateHistoryDisplay(); // 抽獎後更新歷史紀錄和筆數
-        updateStorageSize(); // 更新儲存空間顯示
+        updateStorageSize();    // 更新儲存空間顯示
         animationContainer.innerHTML = '';
     }, 2000);
 }
@@ -168,6 +175,7 @@ function saveToHistory(result) {
     let history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
     const timestamp = new Date().toLocaleString();
 
+    // 插入分隔線（可視需求自行調整）
     history.unshift({ isSeparator: true });
     result.forEach(function(item) {
         history.unshift({
@@ -182,9 +190,11 @@ function saveToHistory(result) {
     });
     history.unshift({ isSeparator: true });
 
+    // 控制歷史紀錄最大筆數
     if (history.length > 1000) {
         history = history.slice(0, 1000);
     }
+
     try {
         localStorage.setItem("lotteryHistory", JSON.stringify(history));
     } catch (e) {
@@ -194,8 +204,8 @@ function saveToHistory(result) {
             history = [];
         }
     }
-    updateHistoryDisplay(); // 保存後更新歷史紀錄和筆數
-    updateStorageSize(); // 保存後更新儲存空間顯示
+    updateHistoryDisplay();
+    updateStorageSize();
 }
 
 // 更新歷史紀錄顯示（確保即時更新筆數）
@@ -214,7 +224,7 @@ function updateHistoryDisplay(searchQuery) {
             const query = searchQuery.trim().toLowerCase();
             filteredHistory = history.filter(function(item) {
                 if (item.isSeparator) return false;
-                return item.player.toLowerCase().includes(query) || 
+                return item.player.toLowerCase().includes(query) ||
                        (item.customText || item.name).toLowerCase().includes(query);
             });
         }
@@ -246,6 +256,7 @@ function updateHistoryDisplay(searchQuery) {
         html += '</tbody></table>';
         historyDiv.innerHTML = html;
 
+        // 點擊某筆歷史紀錄，若和獎池的 name 相符，則可放大圖片
         filteredHistory.forEach(function(item, index) {
             if (!item.isSeparator) {
                 const row = historyDiv.querySelector(`tbody tr:nth-child(${index + 1})`);
@@ -259,12 +270,12 @@ function updateHistoryDisplay(searchQuery) {
         });
     }
 
-    // 更新歷史紀錄列數（即時計算）
+    // 更新歷史紀錄列數
     const history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
     const recordCount = history.filter(function(item) { return !item.isSeparator; }).length;
     const recordCountElement = document.getElementById("record-count");
     if (recordCountElement) {
-        // recordCountElement.textContent = `歷史紀錄: ${recordCount} 筆`;
+        // 如需顯示：recordCountElement.textContent = `歷史紀錄: ${recordCount} 筆`;
     }
 }
 
@@ -279,7 +290,7 @@ function updateStorageSize() {
     let total = 0;
     for (let key in localStorage) {
         if (localStorage.hasOwnProperty(key)) {
-            total += ((localStorage[key].length + key.length) * 2); // 每個字元約 2 字節
+            total += ((localStorage[key].length + key.length) * 2); // 每字元約 2 byte
         }
     }
     const sizeInKB = (total / 1024).toFixed(2);
@@ -306,7 +317,7 @@ function copyHistoryToClipboard() {
     }).catch(function(err) {
         Swal.fire('錯誤！', '複製失敗，請檢查瀏覽器權限。', 'error');
     });
-    updateHistoryDisplay(); // 確保更新筆數顯示
+    updateHistoryDisplay();
 }
 
 // 匯出歷史紀錄為 Excel 檔案
@@ -325,7 +336,7 @@ function exportHistoryToExcel() {
     XLSX.utils.book_append_sheet(wb, ws, "LotteryHistory");
     XLSX.writeFile(wb, "lottery_history.xlsx");
     Swal.fire('成功！', '歷史紀錄已匯出為 Excel 檔案。', 'success');
-    updateHistoryDisplay(); // 確保更新筆數顯示
+    updateHistoryDisplay();
 }
 
 // 綁定按鈕事件
@@ -344,14 +355,14 @@ function clearHistory() {
     }).then(function(result) {
         if (result.isConfirmed) {
             localStorage.removeItem("lotteryHistory");
-            updateHistoryDisplay(); // 清空後更新歷史紀錄和筆數
-            updateStorageSize(); // 清空後更新儲存空間顯示
+            updateHistoryDisplay();
+            updateStorageSize();
             Swal.fire('歷史紀錄已清空！', '', 'success');
         }
     });
 }
 
-// 增加獎池彈窗
+// 顯示新增獎項彈窗
 function showAddPrizeModal() {
     Swal.fire({
         title: '選擇獎項圖片',
@@ -412,7 +423,7 @@ function showAddPrizeModal() {
     });
 }
 
-// 隨機分配機率
+// 分配機率讓總和為 100%
 function distributeProbabilities() {
     const currentTotal = prizes.reduce(function(sum, prize) {
         return sum + prize.probability;
@@ -433,9 +444,7 @@ function distributeProbabilities() {
     }, 0);
     if (finalTotal !== 100) {
         const diff = 100 - finalTotal;
-        const activePrizes = prizes.filter(function(p) {
-            return p.quantity > 0;
-        });
+        const activePrizes = prizes.filter(function(p) { return p.quantity > 0; });
         if (activePrizes.length > 0) {
             activePrizes[0].probability += diff;
         }
@@ -450,7 +459,9 @@ function distributeProbabilities() {
         return sum + prize.probability;
     }, 0);
     document.getElementById("probability-warning").textContent = 
-        updatedTotal === 100 ? "總機率為 100%" : `注意：目前總機率為 ${updatedTotal.toFixed(2)}%，請調整至 100%`;
+        updatedTotal === 100
+            ? "總機率為 100%"
+            : `注意：目前總機率為 ${updatedTotal.toFixed(2)}%，請調整至 100%`;
 }
 
 // 按比例調整機率至 100%
@@ -474,9 +485,7 @@ function adjustProbabilitiesTo100() {
     }, 0);
     if (finalTotal !== 100) {
         const diff = 100 - finalTotal;
-        const activePrizes = prizes.filter(function(p) {
-            return p.quantity > 0;
-        });
+        const activePrizes = prizes.filter(function(p) { return p.quantity > 0; });
         if (activePrizes.length > 0) {
             activePrizes[0].probability += diff;
         }
@@ -488,7 +497,150 @@ function adjustProbabilitiesTo100() {
     });
 }
 
-// 顯示設置彈窗
+// 刪除選中獎項
+function deleteSelectedPrizes() {
+    const checkboxes = document.querySelectorAll(".swal2-modal .delete-check:checked");
+    const indicesToDelete = Array.from(checkboxes).map(function(cb) {
+        return parseInt(cb.getAttribute("data-index"));
+    });
+    if (indicesToDelete.length === 0) {
+        Swal.showValidationMessage('請至少選中一個獎項！');
+        return;
+    }
+
+    prizes = prizes.filter(function(_, index) {
+        return !indicesToDelete.includes(index);
+    });
+    Swal.getPopup().querySelector(".prize-table tbody").innerHTML = prizes.map(function(prize, index) {
+        return `
+            <tr>
+                <td><input type="checkbox" class="delete-check" data-index="${index}"></td>
+                <td>${prize.name}</td>
+                <td><input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"></td>
+                <td><input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"></td>
+                <td><input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"></td>
+                <td><input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"></td>
+                <td><input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input"></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// --- 新增：匯出獎池設定 ---
+function exportPrizesToExcel() {
+    // 將目前的 prizes 轉成適合匯出的物件陣列
+    const data = prizes.map(prize => ({
+        名稱: prize.name,
+        機率: prize.probability,
+        數量: prize.quantity,
+        顯示文字: prize.customText || "",
+        文字顏色: prize.textColor || "#333333",
+        背景顏色: prize.bgColor || "#ffffff"
+        // 若要包含圖片，可加上 imageBase64: prize.image
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "PrizeSettings");
+    XLSX.writeFile(wb, "prizes_settings.xlsx");
+    Swal.fire('成功！', '設定已匯出為 Excel 檔案。', 'success');
+}
+
+// --- 新增：顯示匯入介面 ---
+function importPrizesFromExcelUI() {
+    Swal.fire({
+        title: '匯入 Excel',
+        html: `
+            <input type="file" id="prizeFile" accept=".xlsx, .xls" />
+            <p style="font-size:14px;color:#666;">請選擇包含「名稱、機率、數量、顯示文字、文字顏色、背景顏色」欄位的Excel</p>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '匯入',
+        cancelButtonText: '取消',
+        preConfirm: () => {
+            const fileInput = document.getElementById("prizeFile");
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                Swal.showValidationMessage('請先選擇檔案！');
+                return false;
+            }
+            return fileInput.files[0];
+        }
+    }).then(result => {
+        if (result.isConfirmed && result.value) {
+            const file = result.value;
+            handlePrizesFile(file);
+        }
+    });
+}
+
+// --- 新增：讀取上傳的 Excel 並更新 prizes ---
+function handlePrizesFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            // 只讀第一個工作表
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            // jsonData[0] 通常是標題列
+            let headerRow = jsonData[0];
+            if (!headerRow || headerRow.length === 0) {
+                Swal.fire('匯入失敗！', 'Excel 格式不正確或沒有標題列。', 'error');
+                return;
+            }
+            // 找出欄位索引
+            const nameIndex = headerRow.indexOf("名稱");
+            const probIndex = headerRow.indexOf("機率");
+            const qtyIndex  = headerRow.indexOf("數量");
+            const textIndex = headerRow.indexOf("顯示文字");
+            const txtColorIndex = headerRow.indexOf("文字顏色");
+            const bgColorIndex  = headerRow.indexOf("背景顏色");
+
+            if (nameIndex === -1 || probIndex === -1 || qtyIndex === -1) {
+                Swal.fire('匯入失敗！', 'Excel 欄位至少要有「名稱、機率、數量」。', 'error');
+                return;
+            }
+
+            // 清空原獎項（或自行考慮是否要合併）
+            prizes = [];
+
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || row.length === 0) continue;
+
+                const nameVal     = row[nameIndex];
+                const probVal     = parseFloat(row[probIndex]) || 0;
+                const qtyVal      = parseInt(row[qtyIndex]) || 0;
+                const customText  = (textIndex >= 0 && row[textIndex]) ? row[textIndex] : "";
+                const textColor   = (txtColorIndex >= 0 && row[txtColorIndex]) ? row[txtColorIndex] : "#333333";
+                const bgColor     = (bgColorIndex  >= 0 && row[bgColorIndex])  ? row[bgColorIndex]  : "#ffffff";
+
+                prizes.push({
+                    name: String(nameVal),
+                    probability: probVal,
+                    quantity: qtyVal,
+                    customText: customText,
+                    textColor: textColor,
+                    bgColor: bgColor,
+                    image: "" // 可加預設圖片或空值
+                });
+            }
+
+            localStorage.setItem("prizes", JSON.stringify(prizes));
+            adjustProbabilities();
+            Swal.fire('成功！', '已從 Excel 匯入設定。', 'success');
+        } catch (error) {
+            console.error(error);
+            Swal.fire('匯入失敗！', '讀取檔案時發生錯誤，請確認 Excel 格式。', 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// 顯示「設置」彈窗
 document.getElementById("settings-btn").addEventListener("click", function() {
     let html = '<h3>調整獎項設置</h3>';
     html += `
@@ -506,6 +658,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
             </thead>
             <tbody>
     `;
+
     prizes.forEach(function(prize, index) {
         html += `
             <tr>
@@ -519,6 +672,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
             </tr>
         `;
     });
+
     html += `
             </tbody>
         </table>
@@ -528,6 +682,9 @@ document.getElementById("settings-btn").addEventListener("click", function() {
         <div>縮圖尺寸 (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
         <div>放大尺寸 (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
         <p id="probability-warning"></p>
+        <!-- 新增匯出/匯入設定按鈕 -->
+        <button type="button" onclick="exportPrizesToExcel()" class="action-btn">匯出設定</button>
+        <button type="button" onclick="importPrizesFromExcelUI()" class="action-btn">匯入設定</button>
     `;
 
     Swal.fire({
@@ -571,7 +728,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
             if (total !== 100) {
                 Swal.fire({
                     title: '機率總和不等於 100%！',
-                    text: `當前總機率為 ${total.toFixed(2)}%，請點擊「分配機率」按鈕調整至 100%。`,
+                    text: `當前總機率為 ${total.toFixed(2)}%，請點擊「分配機率」按鈕或自行調整。`,
                     icon: 'warning',
                     confirmButtonText: '確定'
                 });
@@ -584,6 +741,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
             localStorage.setItem("thumbnailSize", thumbnailSize);
             localStorage.setItem("enlargedSize", enlargedSize);
             document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
+
             adjustProbabilities();
         }
     }).then(function(result) {
@@ -592,53 +750,27 @@ document.getElementById("settings-btn").addEventListener("click", function() {
         }
     });
 
+    // 顯示當前機率總和提示
     const total = prizes.reduce(function(sum, prize) {
         return sum + (prize.quantity > 0 ? prize.probability : 0);
     }, 0);
     document.getElementById("probability-warning").textContent = 
-        total === 100 ? "總機率為 100%" : `注意：目前總機率為 ${total.toFixed(2)}%，請調整至 100%`;
+        total === 100
+            ? "總機率為 100%"
+            : `注意：目前總機率為 ${total.toFixed(2)}%，請調整至 100%`;
 });
-
-// 刪除選中獎項
-function deleteSelectedPrizes() {
-    const checkboxes = document.querySelectorAll(".swal2-modal .delete-check:checked");
-    const indicesToDelete = Array.from(checkboxes).map(function(cb) {
-        return parseInt(cb.getAttribute("data-index"));
-    });
-    if (indicesToDelete.length === 0) {
-        Swal.showValidationMessage('請至少選中一個獎項！');
-        return;
-    }
-
-    prizes = prizes.filter(function(_, index) {
-        return !indicesToDelete.includes(index);
-    });
-    Swal.getPopup().querySelector(".prize-table tbody").innerHTML = prizes.map(function(prize, index) {
-        return `
-            <tr>
-                <td><input type="checkbox" class="delete-check" data-index="${index}"></td>
-                <td>${prize.name}</td>
-                <td><input type="number" min="0" max="100" value="${prize.probability}" data-index="${index}" class="prob-input"></td>
-                <td><input type="number" min="0" value="${prize.quantity}" data-qty-index="${index}" class="qty-input"></td>
-                <td><input type="text" value="${prize.customText || prize.name}" data-text-index="${index}" class="text-input"></td>
-                <td><input type="color" value="${prize.textColor || '#333333'}" data-text-color-index="${index}" class="color-input"></td>
-                <td><input type="color" value="${prize.bgColor || '#ffffff'}" data-bg-color-index="${index}" class="color-input"></td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// 暴露全局函數
-window.globalFunctions = {
-    showAddPrizeModal: showAddPrizeModal,
-    deleteSelectedPrizes: deleteSelectedPrizes,
-    distributeProbabilities: distributeProbabilities,
-    adjustProbabilitiesTo100: adjustProbabilitiesTo100
-};
 
 // 頁面加載時初始化
 window.onload = function() {
     loadSettings();
     adjustProbabilities();
     updateHistoryDisplay();
+};
+
+// 暴露全域函式（若有需要）
+window.globalFunctions = {
+    showAddPrizeModal: showAddPrizeModal,
+    deleteSelectedPrizes: deleteSelectedPrizes,
+    distributeProbabilities: distributeProbabilities,
+    adjustProbabilitiesTo100: adjustProbabilitiesTo100
 };
