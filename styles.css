@@ -24,7 +24,6 @@ button {
     cursor: pointer;
     transition: transform 0.2s, background-color 0.2s;
 }
-
 button:hover {
     background-color: #0056b3;
     transform: scale(1.05);
@@ -43,32 +42,11 @@ button:hover {
     z-index: 1000;
     transition: transform 0.2s, background-color 0.2s;
 }
-
 .settings-btn:hover {
     background-color: #218838;
     transform: scale(1.05);
 }
 
-.input-section {
-    margin: 20px 0;
-    text-align: center;
-    position: relative;
-}
-
-.input-section label {
-    font-size: 16px;
-    margin-right: 10px;
-}
-
-.input-section input[type="text"] {
-    padding: 8px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    width: 200px;
-}
-
-/* ---- 抽獎結果區 ---- */
 .result {
     margin-top: 20px;
     display: flex;
@@ -77,14 +55,25 @@ button:hover {
     gap: 10px;
 }
 
+/* 抽獎結果：依照 displayMode 不同會顯示文字、圖片或全部 */
 .result-item {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 6px;
-    cursor: default;
-    animation: scaleIn 0.3s ease-out; /* 抽獎時彈出動畫 */
+    cursor: pointer;
+    animation: scaleIn 0.3s ease-out;
+    padding: 5px;
+    border-radius: 5px;
+}
+.result-item img {
+    max-width: var(--thumbnail-size, 80px);
+    max-height: var(--thumbnail-size, 80px);
+    object-fit: contain;
+}
+.result-item .result-text {
+    margin-top: 5px;
+    font-size: 16px;
+    color: #333;
 }
 
 @keyframes scaleIn {
@@ -92,54 +81,28 @@ button:hover {
     100% { transform: scale(1); opacity: 1; }
 }
 
-.result-text {
-    font-size: 16px;
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-.result-thumbnail {
-    max-width: 50px;
-    max-height: 50px;
-    object-fit: contain;
-}
-
-/* ---- 歷史紀錄區 ---- */
-.history-section {
-    margin: 20px 0;
-    position: relative;
-}
-
-.history-search {
-    width: 100%;
-    max-width: 300px;
-    padding: 8px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    margin-bottom: 10px;
-}
-
 .history {
     margin-top: 20px;
     max-height: 300px;
     overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
 }
 
-.storage-size {
-    position: absolute;
-    right: 0;
-    top: 20px;
-    font-size: 14px;
-    color: #666;
+.history-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+    cursor: pointer;
 }
-
-.record-count {
-    position: absolute;
-    right: 0;
-    top: 0;
+.history-item img {
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: contain;
+    margin-right: 10px;
+}
+.history-item span {
     font-size: 14px;
-    color: #666;
 }
 
 .clear-btn {
@@ -157,9 +120,44 @@ button:hover {
     transform: scale(1.05);
 }
 
+.history-section {
+    margin: 20px 0;
+    position: relative;
+}
+
+.history-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.storage-size {
+    position: absolute;
+    right: 0;
+    top: 20px;
+    font-size: 14px;
+    color: #666;
+}
+.record-count {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: 14px;
+    color: #666;
+}
+
 #copy-btn {
     margin-left: 10px;
     background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 #copy-btn:hover {
     background-color: #45a049;
@@ -168,46 +166,57 @@ button:hover {
 #export-btn {
     margin-left: 10px;
     background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 #export-btn:hover {
     background-color: #1976D2;
 }
 
-/* ---- 歷史紀錄表格樣式 ---- */
-.history-table {
+/* SweetAlert2 modal：獎項表格 */
+.prize-table, .history-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 20px 0;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin: 10px 0;
 }
-
-.history-table thead {
-    background-color: #f2f2f2;
-}
-
-.history-table th,
-.history-table td {
+.prize-table th, .prize-table td,
+.history-table th, .history-table td {
     border: 1px solid #ccc;
-    padding: 8px 12px;
+    padding: 8px;
     text-align: center;
-    vertical-align: middle;
-    font-size: 14px;
-    color: #333;
 }
-
-.history-table th {
+.prize-table th, .history-table th {
+    background-color: #f2f2f2;
     font-weight: bold;
-    white-space: nowrap;
 }
 
-.history-table tbody tr:hover {
-    background-color: #fafafa;
+/* 其它按鈕 */
+.swal2-modal .action-btn {
+    margin: 10px 5px 0 0;
+    padding: 8px 15px;
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.swal2-modal .action-btn:hover {
+    background-color: #138496;
 }
 
-.history-table .separator td {
-    border: 0;
-    height: 2px;
-    background-color: #ddd;
-    padding: 0;
+.input-section {
+    margin: 20px 0;
+}
+
+/* 動畫區 */
+.animation-container {
+    width: 300px;
+    height: 300px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

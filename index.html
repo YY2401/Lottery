@@ -3,24 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottery (顯示模式)</title>
-
+    <title>Lottery</title>
     <!-- 主題樣式表 -->
     <link rel="stylesheet" href="styles.css">
-
-    <!-- SweetAlert2：彈窗提示 -->
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- JSZip：壓縮/解壓套件 (若需ZIP匯出/匯入) -->
-    <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
-
-    <!-- 若需要匯出 Excel，請引入 SheetJS (可移除) -->
+    <!-- SheetJS (若需匯出 Excel) -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-    <h1>LOTTERY</h1>
+    <h1>Lottery</h1>
 
     <div class="input-section">
+        <div id="animation-container" class="animation-container"></div>
         <label for="player-name">抽獎者名稱：</label>
         <input type="text" id="player-name" placeholder="請輸入名稱">
     </div>
@@ -46,10 +41,10 @@
     <button id="copy-btn" class="clear-btn">複製到剪貼簿</button>
     <button id="export-btn" class="clear-btn">匯出 Excel</button>
 
-    <!-- 打開設定視窗按鈕 -->
+    <!-- 設置 (後臺管理) -->
     <button id="settings-btn" class="settings-btn">設置</button>
 
-    <!-- 主要程式邏輯 -->
+    <!-- 主邏輯程式 -->
     <script src="script.js"></script>
 </body>
 </html>
