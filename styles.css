@@ -47,6 +47,24 @@ button:hover {
     transform: scale(1.05);
 }
 
+.input-section {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+.input-section label {
+    font-size: 16px;
+    margin-right: 10px;
+}
+.input-section input[type="text"] {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 200px;
+}
+
+/* -- 抽獎結果 -- */
 .result {
     margin-top: 20px;
     display: flex;
@@ -69,14 +87,14 @@ button:hover {
     max-height: var(--thumbnail-size, 80px);
     object-fit: contain;
 }
-.result-item span {
+.result-item .result-text {
     margin-top: 5px;
     font-size: 16px;
     color: #333;
 }
 
 @keyframes scaleIn {
-    0% { transform: scale(0); opacity: 0; }
+    0%   { transform: scale(0); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
 
@@ -120,7 +138,6 @@ button:hover {
 #copy-btn {
     margin-left: 10px;
     background-color: #4CAF50;
-    border: none;
 }
 #copy-btn:hover {
     background-color: #45a049;
@@ -129,15 +146,13 @@ button:hover {
 #export-btn {
     margin-left: 10px;
     background-color: #2196F3;
-    border: none;
 }
 #export-btn:hover {
     background-color: #1976D2;
 }
 
 /* -- SweetAlert2 (設置彈窗) -- */
-.prize-table,
-.history-table {
+.prize-table, .history-table {
     width: 100%;
     border-collapse: collapse;
     margin: 10px 0;
@@ -166,7 +181,7 @@ button:hover {
     background-color: #138496;
 }
 
-/* -- 動畫容器 (cat face 若需) -- */
+/* -- 動畫容器 (cat face) -- */
 .animation-container {
     width: 300px;
     height: 300px;
@@ -174,19 +189,4 @@ button:hover {
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-.storage-size {
-    position: absolute;
-    right: 0;
-    top: 20px;
-    font-size: 14px;
-    color: #666;
-}
-.record-count {
-    position: absolute;
-    right: 0;
-    top: 0;
-    font-size: 14px;
-    color: #666;
 }
