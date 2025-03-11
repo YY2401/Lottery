@@ -86,8 +86,47 @@ button:hover {
     margin-top: 20px;
     max-height: 300px;
     overflow-y: auto;
+    /* 原本有 border:1px solid #ccc; padding:10px; 可自行保留或刪除
+       如果想跟下面的 .history-table 風格合併，就可以移除。 */
+}
+.history-table {
+    width: 100%;
+    border-collapse: collapse; /* 避免雙線 */
+    margin: 20px 0;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 輕微陰影 */
+}
+
+.history-table thead {
+    background-color: #f2f2f2;  /* 表頭底色 */
+}
+
+.history-table th,
+.history-table td {
     border: 1px solid #ccc;
-    padding: 10px;
+    padding: 8px 12px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14px;
+    color: #333;
+}
+
+/* 表頭粗體、不換行 */
+.history-table th {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* 滑鼠懸停時 */
+.history-table tbody tr:hover {
+    background-color: #fafafa;
+}
+
+.history-table .separator td {
+    border: 0;
+    height: 2px;
+    background-color: #ddd;
+    padding: 0;
 }
 
 .history-item {
@@ -102,10 +141,6 @@ button:hover {
     max-height: 40px;
     object-fit: contain;
     margin-right: 10px;
-}
-
-.history-item span {
-    font-size: 14px;
 }
 
 .clear-btn {
