@@ -1,4 +1,4 @@
-/* -- 全域樣式 -- */
+/* -- 全域 -- */
 body {
     font-family: Arial, sans-serif;
     text-align: center;
@@ -13,7 +13,6 @@ h1, h2 {
 .buttons {
     margin: 20px 0;
 }
-
 button {
     padding: 12px 24px;
     margin: 5px;
@@ -46,6 +45,23 @@ button:hover {
 .settings-btn:hover {
     background-color: #218838;
     transform: scale(1.05);
+}
+
+.input-section {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+.input-section label {
+    font-size: 16px;
+    margin-right: 10px;
+}
+.input-section input[type="text"] {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 200px;
 }
 
 /* -- 抽獎結果 -- */
@@ -83,6 +99,19 @@ button:hover {
 }
 
 /* -- 歷史紀錄 -- */
+.history-section {
+    margin: 20px 0;
+    position: relative;
+}
+.history-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
 .history {
     margin-top: 20px;
     max-height: 300px;
@@ -90,23 +119,7 @@ button:hover {
     border: 1px solid #ccc;
     padding: 10px;
 }
-.history-item {
-    display: flex;
-    align-items: center;
-    margin: 5px 0;
-    cursor: pointer;
-}
-.history-item img {
-    max-width: 40px;
-    max-height: 40px;
-    object-fit: contain;
-    margin-right: 10px;
-}
-.history-item span {
-    font-size: 14px;
-}
 
-/* -- 其它功能按鈕 -- */
 .clear-btn {
     margin-top: 10px;
     padding: 10px 20px;
@@ -122,38 +135,23 @@ button:hover {
     transform: scale(1.05);
 }
 
-/* -- SweetAlert2 -- */
-.swal2-modal .action-btn {
-    margin: 10px 5px 0 0;
-    padding: 8px 15px;
-    background-color: #17a2b8;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+#copy-btn {
+    margin-left: 10px;
+    background-color: #4CAF50;
 }
-.swal2-modal .action-btn:hover {
-    background-color: #138496;
+#copy-btn:hover {
+    background-color: #45a049;
 }
 
-.input-section {
-    margin: 20px 0;
-    text-align: center;
-    position: relative;
+#export-btn {
+    margin-left: 10px;
+    background-color: #2196F3;
 }
-.input-section label {
-    font-size: 16px;
-    margin-right: 10px;
-}
-.input-section input[type="text"] {
-    padding: 8px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    width: 200px;
+#export-btn:hover {
+    background-color: #1976D2;
 }
 
-/* -- 設置頁面表格 -- */
+/* -- SweetAlert2 (設置彈窗) -- */
 .prize-table, .history-table {
     width: 100%;
     border-collapse: collapse;
@@ -168,6 +166,19 @@ button:hover {
 .prize-table th, .history-table th {
     background-color: #f2f2f2;
     font-weight: bold;
+}
+
+.swal2-modal .action-btn {
+    margin: 10px 5px 0 0;
+    padding: 8px 15px;
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.swal2-modal .action-btn:hover {
+    background-color: #138496;
 }
 
 /* -- 動畫容器 (cat face) -- */
