@@ -61,7 +61,7 @@ button:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
-    cursor: pointer; /* 點擊放大 */
+    cursor: pointer;
 }
 
 .result-item img {
@@ -88,11 +88,11 @@ button:hover {
     display: flex;
     align-items: center;
     margin: 5px 0;
-    cursor: pointer; /* 點擊放大 */
+    cursor: pointer;
 }
 
 .history-item img {
-    max-width: 40px; /* 歷史紀錄小圖 */
+    max-width: 40px;
     max-height: 40px;
     object-fit: contain;
     margin-right: 10px;
@@ -180,7 +180,7 @@ button:hover {
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    animation: scaleIn 0.3s ease-out; /* 抽出來的縮放動畫 */
+    animation: scaleIn 0.3s ease-out;
 }
 
 @keyframes scaleIn {
@@ -203,35 +203,7 @@ button:hover {
     align-items: center;
 }
 
-/* SVG 動畫樣式: 依機率改變臉部表情 */
-.low-prob svg {
-    animation: sparkle 2s ease-in-out forwards;
-}
-.mid-prob svg {
-    animation: spin 2s ease-in-out forwards;
-}
-.high-prob svg {
-    animation: wave 2s ease-in-out forwards;
-}
-
-@keyframes sparkle {
-    0% { opacity: 0; transform: scale(0); }
-    50% { opacity: 1; transform: scale(1.2); }
-    100% { opacity: 0; transform: scale(1); }
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes wave {
-    0% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0); }
-}
-
-/* 表情補充 */
+/* SVG 動畫樣式：依機率改變表情 */
 .sad svg {
     animation: shake 2s ease-in-out forwards;
 }
@@ -241,15 +213,18 @@ button:hover {
 .happy svg {
     animation: bounce 2s ease-in-out forwards;
 }
+
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-10px); }
     75% { transform: translateX(10px); }
 }
+
 @keyframes blink {
     0%, 100% { transform: scaleY(1); }
     50% { transform: scaleY(0.1); }
 }
+
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-20px); }

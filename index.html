@@ -3,26 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottery</title>
-    <!-- 主題樣式表 -->
+    <title>Lottery (ZIP 版)</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- SweetAlert2 -->
+
+    <!-- SweetAlert2：彈窗提示 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- SheetJS (XLSX) 匯入/匯出 Excel -->
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <!-- JSZip：壓縮/解壓套件 (本範例使用 CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
 </head>
 <body>
-    <h1>Lottery</h1>
+    <h1>Lottery (ZIP 版)</h1>
+
     <div class="input-section">
         <div id="animation-container" class="animation-container"></div>
         <label for="player-name">抽獎者名稱：</label>
         <input type="text" id="player-name" placeholder="請輸入名稱">
     </div>
+
     <div class="buttons">
         <button onclick="draw(1)">單抽</button>
         <button onclick="draw(5)">五連抽</button>
         <button onclick="draw(10)">十連抽</button>
     </div>
+
     <div id="result" class="result"></div>
 
     <h2>歷史紀錄</h2>
