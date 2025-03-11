@@ -7,7 +7,7 @@ let prizes = [];
 let thumbnailSize = 80;
 let enlargedSize = 300;
 
-// 頁面載入即執行
+// 頁面載入時執行
 window.onload = function() {
     loadSettings();
     adjustProbabilities();
@@ -26,8 +26,8 @@ function loadSettings() {
     enlargedSize = parseInt(localStorage.getItem("enlargedSize")) || 300;
     document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
 
-    updateHistoryDisplay(); // 初始顯示歷史
-    updateStorageSize();    // 顯示使用空間
+    updateHistoryDisplay();
+    updateStorageSize();
 }
 
 // --------------------
@@ -65,11 +65,7 @@ function draw(times) {
         }
     }
 
-    // 以抽到機率最小的獎項決定貓臉表情
-    const minProbPrize = result.reduce((min, c) => c.probability < min.probability ? c : min, result[0]);
-    const animationContainer = document.getElementById("animation-container");
-    animationContainer.innerHTML = getCatFaceSVG(minProbPrize.probability, minProbPrize.bgColor, minProbPrize.textColor);
-
+    // 顯示抽獎結果到畫面 (不再顯示貓臉表情)
     setTimeout(() => {
         const resultDiv = document.getElementById("result");
         if (resultDiv) {
@@ -86,52 +82,11 @@ function draw(times) {
                 resultDiv.appendChild(div);
             });
         }
+        // 存歷史紀錄
         saveToHistory(result);
         updateHistoryDisplay();
         updateStorageSize();
-        animationContainer.innerHTML = '';
-    }, 2000);
-}
-
-// --------------------
-// 貓臉 SVG (依概率換表情)
-// --------------------
-function getCatFaceSVG(probability, bgColor, textColor) {
-    let svgClass, svgContent;
-    const defaultTextColor = textColor || '#000';
-
-    if (probability < 20) {
-        svgClass = 'sad';
-        svgContent = `
-            <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="${bgColor || '#fff'}" />
-                <circle cx="35" cy="40" r="10" fill="${defaultTextColor}" />
-                <circle cx="65" cy="40" r="10" fill="${defaultTextColor}" />
-                <path d="M 35 60 Q 50 70 65 60" fill="none" stroke="${defaultTextColor}" stroke-width="3" />
-            </svg>
-        `;
-    } else if (probability <= 50) {
-        svgClass = 'neutral';
-        svgContent = `
-            <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="${bgColor || '#fff'}" />
-                <line x1="30" y1="40" x2="40" y2="40" stroke="${defaultTextColor}" stroke-width="3" />
-                <line x1="60" y1="40" x2="70" y2="40" stroke="${defaultTextColor}" stroke-width="3" />
-                <line x1="35" y1="60" x2="65" y2="60" stroke="${defaultTextColor}" stroke-width="3" />
-            </svg>
-        `;
-    } else {
-        svgClass = 'happy';
-        svgContent = `
-            <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="${bgColor || '#fff'}" />
-                <circle cx="35" cy="40" r="10" fill="${defaultTextColor}" />
-                <circle cx="65" cy="40" r="10" fill="${defaultTextColor}" />
-                <path d="M 35 60 Q 50 50 65 60" fill="none" stroke="${defaultTextColor}" stroke-width="3" />
-            </svg>
-        `;
-    }
-    return `<div class="${svgClass}">${svgContent}</div>`;
+    }, 200);
 }
 
 // --------------------
@@ -327,8 +282,7 @@ function copyHistoryToClipboard() {
 }
 
 // --------------------
-// 匯出歷史紀錄為 Excel
-// （如果不需要可移除）
+// 匯出歷史紀錄為 Excel（可自行移除）
 // --------------------
 document.getElementById("export-btn")?.addEventListener("click", exportHistoryToExcel);
 function exportHistoryToExcel() {
@@ -341,8 +295,7 @@ function exportHistoryToExcel() {
             時間: item.time
         }));
 
-    // 若想移除 SheetJS，可自行改成 CSV 檔輸出
-    // 這裡僅示範有需要的人可整合
+    // 檢查有沒有載入 SheetJS
     if (typeof XLSX === "undefined") {
         Swal.fire('缺少 SheetJS', '請引入 SheetJS 才能匯出 Excel', 'error');
         return;
@@ -490,7 +443,7 @@ document.getElementById("settings-btn").addEventListener("click", function() {
     const total = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
     const warnEl = document.getElementById("probability-warning");
     if (warnEl) {
-        warnEl.textContent = total === 100 
+        warnEl.textContent = (total === 100) 
             ? "總機率為 100%" 
             : `注意：目前總機率為 ${total.toFixed(2)}%，請調整至 100%`;
     }
@@ -614,14 +567,14 @@ async function exportDataAsZip() {
                     customText: p.customText,
                     textColor: p.textColor,
                     bgColor: p.bgColor,
-                    imageFile: "" // 空表示無圖片
+                    imageFile: ""
                 });
                 continue;
             }
             const mimeType = match[1]; // e.g. "image/png"
             const base64Data = match[2];
 
-            // 產生檔名：<獎項名稱>_<index>.<副檔名>
+            // 檔名
             let ext = mimeType.split("/")[1]; // png / jpeg
             let fileName = `${p.name || 'prize'}_${i}.${ext}`;
             const imageBinary = b64ToUint8Array(base64Data);
@@ -641,7 +594,6 @@ async function exportDataAsZip() {
 
         zip.file("prizes.json", JSON.stringify(exportData, null, 2));
 
-        // 產生 Blob
         const content = await zip.generateAsync({ type: "blob" });
         const blobUrl = URL.createObjectURL(content);
 
@@ -735,7 +687,7 @@ async function handleZipFile(file) {
             });
         }
 
-        // 視需求處理：目前直接「覆蓋」原 prizes
+        // 直接覆蓋
         prizes = rebuiltPrizes;
         localStorage.setItem("prizes", JSON.stringify(prizes));
         adjustProbabilities();

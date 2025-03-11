@@ -61,11 +61,12 @@ button:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
-    cursor: pointer;
+    cursor: pointer; /* 點擊放大 */
+    animation: scaleIn 0.3s ease-out; /* 抽出來的縮放動畫 */
 }
 
 .result-item img {
-    max-width: var(--thumbnail-size, 80px); /* 預設 80px */
+    max-width: var(--thumbnail-size, 80px);
     max-height: var(--thumbnail-size, 80px);
     object-fit: contain;
 }
@@ -74,6 +75,11 @@ button:hover {
     margin-top: 5px;
     font-size: 16px;
     color: #333;
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 .history {
@@ -118,27 +124,7 @@ button:hover {
     transform: scale(1.05);
 }
 
-.swal2-modal .prize-list {
-    max-height: 300px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-}
-
-.swal2-modal .prize-item {
-    display: flex;
-    align-items: center;
-    margin: 5px 0;
-}
-
-.swal2-modal .prize-item input[type="checkbox"] {
-    margin-right: 10px;
-}
-
-.swal2-modal .prize-item input[type="number"] {
-    width: 60px;
-    margin: 0 5px;
-}
-
+/* SweetAlert2 彈窗裡的操作按鈕 */
 .swal2-modal .action-btn {
     margin: 10px 5px 0 0;
     padding: 8px 15px;
@@ -148,13 +134,14 @@ button:hover {
     border-radius: 5px;
     cursor: pointer;
 }
-
 .swal2-modal .action-btn:hover {
     background-color: #138496;
 }
 
 .input-section {
     margin: 20px 0;
+    text-align: center;
+    position: relative;
 }
 
 .input-section label {
@@ -170,66 +157,6 @@ button:hover {
     width: 200px;
 }
 
-.history-item span {
-    font-size: 14px;
-    white-space: nowrap;
-}
-
-.result-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    animation: scaleIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-.input-section {
-    margin: 20px 0;
-    text-align: center;
-    position: relative;
-}
-
-.animation-container {
-    width: 300px;
-    height: 300px;
-    margin: 20px auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* SVG 動畫樣式：依機率改變表情 */
-.sad svg {
-    animation: shake 2s ease-in-out forwards;
-}
-.neutral svg {
-    animation: blink 2s ease-in-out forwards;
-}
-.happy svg {
-    animation: bounce 2s ease-in-out forwards;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
-}
-
-@keyframes blink {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.1); }
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-}
-
 .history-section {
     margin: 20px 0;
     position: relative;
@@ -243,38 +170,6 @@ button:hover {
     border: 1px solid #ccc;
     border-radius: 5px;
     margin-bottom: 10px;
-}
-
-.history-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 10px 0;
-}
-
-.history-table th, .history-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
-}
-
-.history-table th {
-    background-color: #f2f2f2;
-    font-weight: bold;
-}
-
-.history-table .separator td {
-    border-bottom: 2px solid #333;
-    padding: 0;
-    height: 2px;
-    background-color: #ddd;
-}
-
-.color-square {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-right: 5px;
-    vertical-align: middle;
 }
 
 .storage-size {
