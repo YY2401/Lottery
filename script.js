@@ -58,31 +58,16 @@ function draw(times) {
                     p.quantity -= 1;
                     result.push({ ...p, player: playerName });
                     adjustProbabilities();
-                    totalProbability = prizes.reduce((sum, x) => sum + (x.quantity > 0 ? x.probability : 0), 0);
+                    totalProbability = prizes.reduce((s, x) => s + (x.quantity > 0 ? x.probability : 0), 0);
                     break;
                 }
             }
         }
     }
 
-    // 顯示抽獎結果到畫面 (不再顯示貓臉表情)
+    // 使用 setTimeout (若保留動畫或其他效果)
     setTimeout(() => {
-        const resultDiv = document.getElementById("result");
-        if (resultDiv) {
-            resultDiv.innerHTML = "";
-            result.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "result-item";
-                div.style.color = item.textColor || '#333';
-                div.style.backgroundColor = item.bgColor || '#fff';
-                div.innerHTML = `<img src="${item.image}" alt="${item.name}" style="max-width: 100%; height: auto;">`;
-                div.addEventListener("click", () => {
-                    showEnlargedImage(item.image, item.customText || item.name);
-                });
-                resultDiv.appendChild(div);
-            });
-        }
-        // 存歷史紀錄
+        displayDrawResult(result);
         saveToHistory(result);
         updateHistoryDisplay();
         updateStorageSize();
@@ -90,7 +75,51 @@ function draw(times) {
 }
 
 // --------------------
-// 顯示放大圖片
+// 顯示抽獎結果 (重點修改處)
+// --------------------
+function displayDrawResult(result) {
+    const resultDiv = document.getElementById("result");
+    if (!resultDiv) return;
+
+    resultDiv.innerHTML = ""; // 清空之前的結果
+
+    result.forEach(item => {
+        // 建立容器
+        const div = document.createElement("div");
+        div.className = "result-item";
+
+        // 設置文字顏色和背景顏色 (若你想要 "item.bgColor" 覆蓋整塊)
+        div.style.color = item.textColor || "#333";
+        div.style.backgroundColor = item.bgColor || "#fff";
+
+        // 文字區
+        // 若沒 customText 就用 item.name
+        const textHtml = `<div class="result-text">${item.customText || item.name}</div>`;
+
+        // 判斷是否有圖片
+        if (item.image && item.image.trim() !== "") {
+            // 有圖片
+            const imgHtml = `<img src="${item.image}" alt="${item.name}" class="result-thumbnail">`;
+            div.innerHTML = textHtml + imgHtml;
+
+            // 綁定點擊放大圖片
+            div.addEventListener("click", () => {
+                showEnlargedImage(item.image, item.customText || item.name);
+            });
+            // 如果想讓整個 div 都可點擊，可保留 cursor: pointer
+            div.style.cursor = "pointer";
+        } else {
+            // 無圖片，僅顯示文字
+            div.innerHTML = textHtml;
+            // 也可加一個預設 icon or text，但此處留白
+        }
+
+        resultDiv.appendChild(div);
+    });
+}
+
+// --------------------
+// 放大顯示圖片
 // --------------------
 function showEnlargedImage(imageSrc, name) {
     Swal.fire({
@@ -139,8 +168,6 @@ function saveToHistory(result) {
             history = [];
         }
     }
-    updateHistoryDisplay();
-    updateStorageSize();
 }
 
 // --------------------
@@ -192,25 +219,18 @@ function updateHistoryDisplay(searchQuery) {
     html += '</tbody></table>';
     historyDiv.innerHTML = html;
 
-    // 點擊歷史紀錄可顯示對應圖片
+    // 點擊歷史紀錄可顯示對應圖片 (若需要)
     filteredHistory.forEach((item, index) => {
         if (!item.isSeparator) {
             const row = historyDiv.querySelector(`tbody tr:nth-child(${index+1})`);
             const foundPrize = prizes.find(p => p.name === item.name);
-            if (row && foundPrize) {
+            if (row && foundPrize && foundPrize.image && foundPrize.image.trim() !== "") {
                 row.addEventListener("click", () => {
                     showEnlargedImage(foundPrize.image, item.customText || item.name);
                 });
             }
         }
     });
-
-    // 記錄筆數
-    const recordCount = history.filter(item => !item.isSeparator).length;
-    const recordCountElement = document.getElementById("record-count");
-    if (recordCountElement) {
-        // recordCountElement.textContent = `歷史紀錄: ${recordCount} 筆`;
-    }
 }
 
 // --------------------
@@ -559,7 +579,6 @@ async function exportDataAsZip() {
             const p = prizes[i];
             let match = p.image.match(/^data:(image\/\w+);base64,(.*)$/);
             if (!match) {
-                // 沒有圖片或不符合 base64
                 exportData.push({
                     name: p.name,
                     probability: p.probability,
@@ -675,7 +694,6 @@ async function handleZipFile(file) {
                     imageBase64 = base64Str;
                 }
             }
-            // 重建獎項
             rebuiltPrizes.push({
                 name: item.name,
                 probability: item.probability,
@@ -687,7 +705,6 @@ async function handleZipFile(file) {
             });
         }
 
-        // 直接覆蓋
         prizes = rebuiltPrizes;
         localStorage.setItem("prizes", JSON.stringify(prizes));
         adjustProbabilities();

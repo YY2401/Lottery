@@ -1,3 +1,4 @@
+/* ---- 主要全域樣式 ---- */
 body {
     font-family: Arial, sans-serif;
     text-align: center;
@@ -49,130 +50,6 @@ button:hover {
     transform: scale(1.05);
 }
 
-.result {
-    margin-top: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-}
-
-.result-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer; /* 點擊放大 */
-    animation: scaleIn 0.3s ease-out; /* 抽出來的縮放動畫 */
-}
-
-.result-item img {
-    max-width: var(--thumbnail-size, 80px);
-    max-height: var(--thumbnail-size, 80px);
-    object-fit: contain;
-}
-
-.result-item span {
-    margin-top: 5px;
-    font-size: 16px;
-    color: #333;
-}
-
-@keyframes scaleIn {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-.history {
-    margin-top: 20px;
-    max-height: 300px;
-    overflow-y: auto;
-    /* 原本有 border:1px solid #ccc; padding:10px; 可自行保留或刪除
-       如果想跟下面的 .history-table 風格合併，就可以移除。 */
-}
-.history-table {
-    width: 100%;
-    border-collapse: collapse; /* 避免雙線 */
-    margin: 20px 0;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 輕微陰影 */
-}
-
-.history-table thead {
-    background-color: #f2f2f2;  /* 表頭底色 */
-}
-
-.history-table th,
-.history-table td {
-    border: 1px solid #ccc;
-    padding: 8px 12px;
-    text-align: center;
-    vertical-align: middle;
-    font-size: 14px;
-    color: #333;
-}
-
-/* 表頭粗體、不換行 */
-.history-table th {
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-/* 滑鼠懸停時 */
-.history-table tbody tr:hover {
-    background-color: #fafafa;
-}
-
-.history-table .separator td {
-    border: 0;
-    height: 2px;
-    background-color: #ddd;
-    padding: 0;
-}
-
-.history-item {
-    display: flex;
-    align-items: center;
-    margin: 5px 0;
-    cursor: pointer;
-}
-
-.history-item img {
-    max-width: 40px;
-    max-height: 40px;
-    object-fit: contain;
-    margin-right: 10px;
-}
-
-.clear-btn {
-    margin-top: 10px;
-    padding: 10px 20px;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-.clear-btn:hover {
-    background-color: #c82333;
-    transform: scale(1.05);
-}
-
-/* SweetAlert2 彈窗裡的操作按鈕 */
-.swal2-modal .action-btn {
-    margin: 10px 5px 0 0;
-    padding: 8px 15px;
-    background-color: #17a2b8;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.swal2-modal .action-btn:hover {
-    background-color: #138496;
-}
-
 .input-section {
     margin: 20px 0;
     text-align: center;
@@ -192,6 +69,45 @@ button:hover {
     width: 200px;
 }
 
+/* ---- 抽獎結果區 ---- */
+.result {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.result-item {
+    display: inline-flex;      /* 文字 + 縮圖 同行排列 */
+    align-items: center;
+    gap: 8px;                  /* 文字和縮圖間距 */
+    padding: 8px;
+    border-radius: 6px;
+    cursor: default;           /* 無圖時不需要指標手形 */
+    animation: scaleIn 0.3s ease-out; /* 抽獎時彈出動畫 */
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 文字樣式 (顯示文字) */
+.result-text {
+    font-size: 16px;
+    font-weight: bold;
+    white-space: nowrap; /* 避免換行 */
+}
+
+/* 縮圖樣式 (有圖才顯示) */
+.result-thumbnail {
+    max-width: 50px;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+/* ---- 歷史紀錄區 ---- */
 .history-section {
     margin: 20px 0;
     position: relative;
@@ -205,6 +121,12 @@ button:hover {
     border: 1px solid #ccc;
     border-radius: 5px;
     margin-bottom: 10px;
+}
+
+.history {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .storage-size {
@@ -223,14 +145,25 @@ button:hover {
     color: #666;
 }
 
+/* ---- Clear/Copy/Export 按鈕 ---- */
+.clear-btn {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+.clear-btn:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
 #copy-btn {
     margin-left: 10px;
     background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 5px;
-    cursor: pointer;
 }
 #copy-btn:hover {
     background-color: #45a049;
@@ -239,12 +172,46 @@ button:hover {
 #export-btn {
     margin-left: 10px;
     background-color: #2196F3;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 5px;
-    cursor: pointer;
 }
 #export-btn:hover {
     background-color: #1976D2;
+}
+
+/* ---- 歷史紀錄表格樣式 ---- */
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.history-table thead {
+    background-color: #f2f2f2;
+}
+
+.history-table th,
+.history-table td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14px;
+    color: #333;
+}
+
+.history-table th {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.history-table tbody tr:hover {
+    background-color: #fafafa;
+}
+
+.history-table .separator td {
+    border: 0;
+    height: 2px;
+    background-color: #ddd;
+    padding: 0;
 }
