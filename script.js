@@ -22,7 +22,6 @@ function initDB() {
         };
         request.onupgradeneeded = e => {
             const upgradeDB = e.target.result;
-            // 若尚未建立 'prizes' store，就建立一個 keyPath='id' 並自動遞增
             if (!upgradeDB.objectStoreNames.contains('prizes')) {
                 upgradeDB.createObjectStore('prizes', {
                     keyPath: 'id',
@@ -65,10 +64,9 @@ function saveAllPrizes(prizesArray) {
             // 2) 全部重新 add
             let remaining = prizesArray.length;
             if (remaining === 0) {
-                return resolve(); // 沒有要寫入的資料
+                return resolve();
             }
             prizesArray.forEach(prize => {
-                // 若 keyPath='id' 自動增量，就可自由新增
                 const addReq = store.add(prize);
                 addReq.onsuccess = () => {
                     remaining--;
@@ -115,13 +113,16 @@ window.onload = async () => {
         prizes = [];
     }
 
-    // 3) 讀取其他設定 (仍放 localStorage)
+    // 3) 讀取其他設定 (localStorage)
     thumbnailSize = parseInt(localStorage.getItem("thumbnailSize")) || 80;
     enlargedSize  = parseInt(localStorage.getItem("enlargedSize"))  || 300;
     document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
 
-    // 4) 初始化機率邏輯
-    adjustProbabilities(); 
+    // === [MODIFIED] ===
+    // 以往會在此呼叫 adjustProbabilities() 進行動態分攤
+    // 現在不呼叫，機率完全依賴後臺設定，維持固定。
+    // ==================
+
     updateHistoryDisplay();
     updateStorageSize();
 };
@@ -150,6 +151,7 @@ async function drawSingle() {
         return;
     }
 
+    // 計算總機率 (各獎項的 probability)
     const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
     if (totalProb <= 0) {
         Swal.fire('獎池中所有獎項機率為 0，無法抽獎！', '', 'warning');
@@ -171,7 +173,7 @@ async function drawSingle() {
     }
 
     if (pickedItem) {
-        // 插入到前端結果區
+        // 顯示抽獎結果
         const resultDiv = document.getElementById("result");
         if (resultDiv) {
             const div = document.createElement("div");
@@ -219,8 +221,10 @@ async function drawSingle() {
         saveToHistory([pickedItem]);
     }
 
-    // 每抽完就分攤機率
-    adjustProbabilities();
+    // === [MODIFIED] ===
+    // 以往這裡會呼叫 adjustProbabilities() 做動態分配機率
+    // ==================
+
     updateHistoryDisplay();
     updateStorageSize();
 
@@ -235,7 +239,6 @@ async function drawSingle() {
 
 /**
  * 多抽前，先清空顯示區 #result
- * 然後重複呼叫 drawSingle() 指定次數
  */
 async function drawMultiple(count) {
     // 先清空舊結果
@@ -247,13 +250,7 @@ async function drawMultiple(count) {
         return;
     }
 
-    // 因為多抽是「連續呼叫單抽」,
-    // 但每次單抽都會再次 clear -> 會清掉前面抽到的結果。
-    // 所以要改成呼叫「不會清空」的版本。
-    // 這裡可以直接把「單抽邏輯」複製過來，或另外做個「drawSingleNoClear()」。
-
-    // 以下做一個「不清空」版的單抽邏輯，直接內寫：
-
+    // 連抽 count 次
     for (let i = 0; i < count; i++) {
         const activeItems = prizes.filter(p => p.quantity > 0);
         if (!activeItems.length) {
@@ -265,7 +262,7 @@ async function drawMultiple(count) {
             Swal.fire('獎池中所有獎項機率為 0，無法抽獎！', '', 'warning');
             break;
         }
-        // 單抽邏輯
+
         const rand = Math.random() * totalProb;
         let cumulative = 0;
         let pickedItem = null;
@@ -280,7 +277,7 @@ async function drawMultiple(count) {
         }
 
         if (pickedItem) {
-            // 顯示到 #result (不清空)
+            // 顯示多抽中的每一抽結果 (疊加)
             const resultDiv = document.getElementById("result");
             if (resultDiv) {
                 const div = document.createElement("div");
@@ -324,15 +321,15 @@ async function drawMultiple(count) {
                 resultDiv.appendChild(div);
             }
 
-            // 寫入歷史紀錄
             saveToHistory([pickedItem]);
         }
 
-        // 每抽完 1 次，就分攤機率
-        adjustProbabilities();
+        // === [MODIFIED] ===
+        // 以往會呼叫 adjustProbabilities() ，現在不做
+        // ==================
+
         updateStorageSize();
 
-        // 同步更新 IndexedDB
         try {
             await saveAllPrizes(prizes);
         } catch (e) {
@@ -341,11 +338,10 @@ async function drawMultiple(count) {
             break;
         }
 
-        // 可在此加個小延遲，看起來比較有抽卡感
+        // 可以自行加入延遲模擬抽卡
         // await new Promise(res => setTimeout(res, 300));
     }
 
-    // 最後更新一下歷史顯示 (可放在迴圈外)
     updateHistoryDisplay();
 }
 
@@ -531,35 +527,20 @@ function updateStorageSize() {
 }
 
 /***********************************************
- * 機率分攤與後臺管理相關
+ * 取消動態分配: 不再使用 adjustProbabilities()
+ ***********************************************/
+// function adjustProbabilities() {
+//     // 原本會動態分配「已被抽完獎項」的機率給其他獎項
+//     // 這裡我們選擇不再使用，以維持設定時的固定機率
+// }
+
+/***********************************************
+ * 後臺管理相關 (增刪改、Import/Export)
  ***********************************************/
 
-/** 
- * 依「剩餘獎項」比例分攤機率 
- *  - quantity=0 的獎項機率歸零，並把這些機率依照「原先 active 的機率比例」分給還有數量的獎項 
- */
-function adjustProbabilities() {
-    const zeroed = prizes.filter(p => p.quantity === 0);
-    const active = prizes.filter(p => p.quantity > 0);
-
-    if (!active.length) return;
-
-    const sumZeroProb = zeroed.reduce((acc, z) => acc + z.probability, 0);
-    zeroed.forEach(z => {
-        z.probability = 0;
-    });
-
-    const sumActiveProb = active.reduce((acc, a) => acc + a.probability, 0);
-    if (sumActiveProb > 0 && sumZeroProb > 0) {
-        active.forEach(a => {
-            const ratio = a.probability / sumActiveProb;
-            a.probability += sumZeroProb * ratio;
-        });
-    }
-}
-
-/** 
- * 一鍵壓到 100% 機率 
+/**
+ * 一鍵壓到 100% 機率
+ * （若還想要提供給使用者的功能，可保留。否則可刪除。）
  */
 async function distributeProbabilities() {
     const currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
@@ -567,6 +548,7 @@ async function distributeProbabilities() {
 
     const factor = 100 / currentTotal;
     prizes.forEach(p => {
+        // 有數量才分配，quantity=0 的歸零
         if (p.quantity > 0) {
             p.probability = parseFloat((p.probability * factor).toFixed(2));
         } else {
@@ -574,9 +556,14 @@ async function distributeProbabilities() {
         }
     });
 
-    let finalTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
-    if (finalTotal !== 100) {
-        const diff = 100 - finalTotal;
+    // 修正因小數計算造成的誤差
+    let finalTotal = prizes
+      .filter(x => x.quantity > 0)
+      .reduce((sum, p) => sum + p.probability, 0);
+
+    const diff = 100 - finalTotal;
+    if (Math.abs(diff) > 0.001) {
+        // 把小數誤差加回第一個尚有 quantity 的獎項
         const active = prizes.filter(x => x.quantity > 0);
         if (active.length) {
             active[0].probability += diff;
@@ -655,7 +642,6 @@ function showAddPrizeModal() {
         }
     }).then(async r => {
         if (r.isConfirmed) {
-            // 寫回 IndexedDB
             try {
                 await saveAllPrizes(prizes);
                 Swal.fire('獎項已添加！', '', 'success').then(() => {
@@ -739,7 +725,6 @@ async function handlePrizesFile(file) {
             return;
         }
 
-        // 清空再重建
         prizes = [];
 
         for (let i = 1; i < jsonData.length; i++) {
@@ -765,9 +750,13 @@ async function handlePrizesFile(file) {
                 image: ""
             });
         }
+
         await saveAllPrizes(prizes);
-        adjustProbabilities();
-        Swal.fire('成功', '已從Excel匯入獎項', 'success').then(() => {
+        // === [MODIFIED] ===
+        // 以往這裡會呼叫 adjustProbabilities()，現在不做。
+        // ==================
+
+        Swal.fire('成功', '已從 Excel 匯入獎項', 'success').then(() => {
             refreshPrizeTableInModal();
         });
     } catch (err) {
@@ -795,11 +784,10 @@ function refreshPrizeTableInModal() {
               <select data-mode-index="${i}" class="mode-select">
                 <option value="name"  ${p.displayMode==='name'?'selected':''}>名稱</option>
                 <option value="image" ${p.displayMode==='image'?'selected':''}>圖片</option>
-                <option value="all"   ${p.displayMode==='all'  ?'selected':''}>全部</option>
+                <option value="all"   ${p.displayMode==='all'?'selected':''}>全部</option>
               </select>
             </td>
             <td>
-              <!-- 縮小預覽 -->
               <div style="margin-bottom:5px;">
                 ${
                     p.image
@@ -816,7 +804,10 @@ function refreshPrizeTableInModal() {
     }).join('');
 
     // 更新「總機率」提示文字
-    const tot = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
+    const tot = prizes
+      .filter(x => x.quantity > 0) // 只統計有數量的
+      .reduce((sum, p) => sum + p.probability, 0);
+
     const warnEl = document.getElementById("probability-warning");
     if (warnEl) {
         warnEl.textContent = (Math.round(tot) === 100)
@@ -923,8 +914,11 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
                 prizes[idx].displayMode = el.value;
             });
 
-            // 檢查機率總和
-            const totalProb = prizes.reduce((sum, p) => sum + p.probability, 0);
+            // === [MODIFIED] 強制檢查「有數量的獎項」總機率是否 = 100
+            const totalProb = prizes
+              .filter(x => x.quantity > 0)
+              .reduce((sum, p) => sum + p.probability, 0);
+
             if (Math.round(totalProb) !== 100) {
                 Swal.fire('機率總和不等於 100%！', '請先「自動分配機率」或自行調整', 'warning');
                 return false;
@@ -952,7 +946,6 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
         }
     });
 
-    // 彈窗生成後，填充表格
     setTimeout(() => {
         refreshPrizeTableInModal();
     }, 50);
@@ -968,7 +961,6 @@ async function deleteSelectedPrizes() {
     }
     prizes = prizes.filter((_, i) => !toDelete.includes(i));
 
-    // 更新畫面 & 同步寫回 IndexedDB
     try {
         await saveAllPrizes(prizes);
         refreshPrizeTableInModal();
