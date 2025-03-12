@@ -94,9 +94,9 @@ let prizes = []; // 原本放在 localStorage 的獎項，改由 IndexedDB 管�
 let thumbnailSize = 80;
 let enlargedSize = 300;
 
-// --------------------
-// 頁面載入
-// --------------------
+/***********************************************
+ * 頁面載入
+ ***********************************************/
 window.onload = async () => {
     // 1) 初始化 IndexedDB
     try {
@@ -120,113 +120,116 @@ window.onload = async () => {
     enlargedSize  = parseInt(localStorage.getItem("enlargedSize"))  || 300;
     document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
 
-    // 4) 其餘初始化
-    //    (可視需求決定是否先呼叫一次 adjustProbabilities())
+    // 4) 初始機率處理、載入畫面資料
     adjustProbabilities(); 
     updateHistoryDisplay();
     updateStorageSize();
 };
 
-// --------------------
-// 抽獎 (一次性抽多次，最後才重新分配機率)
-// --------------------
-async function draw(times) {
-    const playerName = document.getElementById("player-name").value.trim();
+/***********************************************
+ * 主要抽獎邏輯
+ ***********************************************/
+
+/**
+ * 單抽
+ *  1) 取得還有存量的獎項
+ *  2) 根據機率隨機抽一次
+ *  3) 抽到後扣除 quantity
+ *  4) 即時分攤機率 (可視需求調整為不即時處理)
+ *  5) 更新畫面與紀錄
+ */
+async function drawSingle() {
+    const playerName = document.getElementById("player-name")?.value.trim();
     if (!playerName) {
         Swal.fire('請輸入抽獎者名稱！', '', 'warning');
         return;
     }
 
-    // 計算尚可抽的獎項總機率
+    // 找出還有存量的獎項
     const activeItems = prizes.filter(p => p.quantity > 0);
-    let totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
-
-    if (totalProb <= 0 || !activeItems.length) {
+    if (!activeItems.length) {
         Swal.fire('獎池為空或已抽完！', '請在設置中添加獎項', 'warning');
         return;
     }
 
-    // 不即時分配：一次性抽 times 次
-    // 每抽完 1 個，就將該獎項 quantity--，但不呼叫 adjustProbabilities()
-    const drawResult = [];
-    for (let i = 0; i < times; i++) {
-        // 重新計算尚有 quantity>0 的獎項及其機率和
-        const stillActive = activeItems.filter(x => x.quantity > 0);
-        const newTotalProb = stillActive.reduce((acc, item) => acc + item.probability, 0);
-        if (newTotalProb <= 0 || !stillActive.length) {
-            // 沒有可抽獎項了
-            break;
-        }
+    const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
+    if (totalProb <= 0) {
+        Swal.fire('獎池中所有獎項機率為 0，無法抽獎！', '', 'warning');
+        return;
+    }
 
-        const rand = Math.random() * newTotalProb;
-        let cumulative = 0;
-        for (const p of stillActive) {
-            cumulative += p.probability;
-            if (rand <= cumulative) {
-                p.quantity--;
-                drawResult.push({ ...p, player: playerName });
-                break;
-            }
+    // 隨機抽一次
+    const rand = Math.random() * totalProb;
+    let cumulative = 0;
+    let pickedItem = null;
+
+    for (const p of activeItems) {
+        cumulative += p.probability;
+        if (rand <= cumulative) {
+            p.quantity--;
+            pickedItem = { ...p, player: playerName };
+            break;
         }
     }
 
-    // 多抽完後，再一次性進行機率分配(可視需求保留或刪除)
-    // adjustProbabilities();
+    if (pickedItem) {
+        // 將抽到的獎項插入到前端結果
+        const resultDiv = document.getElementById("result");
+        if (resultDiv) {
+            const div = document.createElement("div");
+            div.className = "result-item";
+            div.style.color = pickedItem.textColor || "#333";
+            div.style.backgroundColor = pickedItem.bgColor || "#fff";
 
-    // 顯示抽獎結果到 #result
-    const resultDiv = document.getElementById("result");
-    if (!resultDiv) return;
-    resultDiv.innerHTML = "";
+            if (pickedItem.displayMode === "image") {
+                if (pickedItem.image && pickedItem.image.trim() !== "") {
+                    div.innerHTML = `<img src="${pickedItem.image}" alt="${pickedItem.name}">`;
+                    div.addEventListener("click", () => {
+                        showEnlargedImage(pickedItem.image, pickedItem.customText || pickedItem.name);
+                    });
+                    div.style.cursor = "pointer";
+                } else {
+                    div.innerHTML = `<div class="result-text">無圖片</div>`;
+                }
+            } else if (pickedItem.displayMode === "all") {
+                const imgPart = (pickedItem.image && pickedItem.image.trim() !== "")
+                    ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
+                    : `<div class="result-text">無圖片</div>`;
+                const textPart = `<div class="result-text">${pickedItem.customText || pickedItem.name}</div>`;
+                div.innerHTML = imgPart + textPart;
 
-    drawResult.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "result-item";
-        div.style.color = item.textColor || "#333";
-        div.style.backgroundColor = item.bgColor || "#fff";
-
-        if (item.displayMode === "image") {
-            if (item.image && item.image.trim() !== "") {
-                div.innerHTML = `<img src="${item.image}" alt="${item.name}">`;
-                div.addEventListener("click", () => {
-                    showEnlargedImage(item.image, item.customText || item.name);
-                });
-                div.style.cursor = "pointer";
+                if (pickedItem.image && pickedItem.image.trim() !== "") {
+                    div.addEventListener("click", () => {
+                        showEnlargedImage(pickedItem.image, pickedItem.customText || pickedItem.name);
+                    });
+                    div.style.cursor = "pointer";
+                }
             } else {
-                div.innerHTML = `<div class="result-text">無圖片</div>`;
+                // displayMode === "name"
+                div.innerHTML = `<div class="result-text">${pickedItem.customText || pickedItem.name}</div>`;
+                if (pickedItem.image && pickedItem.image.trim() !== "") {
+                    div.addEventListener("click", () => {
+                        showEnlargedImage(pickedItem.image, pickedItem.customText || pickedItem.name);
+                    });
+                    div.style.cursor = "pointer";
+                }
             }
-        } else if (item.displayMode === "all") {
-            const imgPart = (item.image && item.image.trim() !== "")
-                ? `<img src="${item.image}" alt="${item.name}">`
-                : `<div class="result-text">無圖片</div>`;
-            const textPart = `<div class="result-text">${item.customText || item.name}</div>`;
-            div.innerHTML = imgPart + textPart;
 
-            if (item.image && item.image.trim() !== "") {
-                div.addEventListener("click", () => {
-                    showEnlargedImage(item.image, item.customText || item.name);
-                });
-                div.style.cursor = "pointer";
-            }
-        } else {
-            // displayMode === "name"
-            div.innerHTML = `<div class="result-text">${item.customText || item.name}</div>`;
-            // 如果有圖片，可以點擊後放大
-            if (item.image && item.image.trim() !== "") {
-                div.addEventListener("click", () => {
-                    showEnlargedImage(item.image, item.customText || item.name);
-                });
-                div.style.cursor = "pointer";
-            }
+            resultDiv.appendChild(div);
         }
-        resultDiv.appendChild(div);
-    });
 
-    // 寫入歷史紀錄
-    saveToHistory(drawResult);
+        // 寫入歷史紀錄
+        saveToHistory([pickedItem]);
+    }
+
+    // (可視需求) 每抽完就分攤機率，讓剩餘獎項的機率馬上調整
+    adjustProbabilities();
+
+    // 更新前端資訊
     updateHistoryDisplay();
     updateStorageSize();
 
-    // 同步更新 IndexedDB 的最新獎項資料
+    // 同步更新 IndexedDB
     try {
         await saveAllPrizes(prizes);
     } catch (e) {
@@ -235,9 +238,22 @@ async function draw(times) {
     }
 }
 
-// --------------------
-// 放大圖片
-// --------------------
+/**
+ * 多抽（例如五連抽、十連抽） -> 實際上連續呼叫多次單抽
+ */
+async function drawMultiple(count) {
+    for (let i = 0; i < count; i++) {
+        // 若想讓抽卡動畫更明顯，可在這裡加個小延遲
+        // await new Promise(r => setTimeout(r, 300));
+        await drawSingle();
+    }
+}
+
+/***********************************************
+ * 與抽獎顯示相關的輔助函式
+ ***********************************************/
+
+/** 放大圖片 */
 function showEnlargedImage(imgSrc, name) {
     Swal.fire({
         title: name,
@@ -251,9 +267,7 @@ function showEnlargedImage(imgSrc, name) {
     });
 }
 
-// --------------------
-// 寫入歷史紀錄 (localStorage)
-// --------------------
+/** 寫入歷史紀錄 (localStorage) */
 function saveToHistory(result) {
     if (!result || !result.length) return;
     let history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
@@ -284,9 +298,7 @@ function saveToHistory(result) {
     }
 }
 
-// --------------------
-// 顯示歷史紀錄
-// --------------------
+/** 顯示歷史紀錄 */
 function updateHistoryDisplay(query) {
     if (!query) query = "";
     const historyDiv = document.getElementById("history");
@@ -334,9 +346,7 @@ document.getElementById("history-search")?.addEventListener("input", e => {
     updateHistoryDisplay(e.target.value);
 });
 
-// --------------------
-// 複製歷史紀錄
-// --------------------
+/** 複製歷史紀錄到剪貼簿 */
 function copyHistoryToClipboard() {
     const hist = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
     let csv = "抽獎者,獎項,時間\n";
@@ -354,9 +364,7 @@ function copyHistoryToClipboard() {
 }
 document.getElementById("copy-btn")?.addEventListener("click", copyHistoryToClipboard);
 
-// --------------------
-// 匯出歷史紀錄 -> Excel
-// --------------------
+/** 匯出歷史紀錄 -> Excel */
 function exportHistoryToExcel() {
     const hist = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
     const data = hist.filter(x => !x.isSeparator).map(item => ({
@@ -377,9 +385,7 @@ function exportHistoryToExcel() {
 }
 document.getElementById("export-btn")?.addEventListener("click", exportHistoryToExcel);
 
-// --------------------
-// 清空歷史
-// --------------------
+/** 清空歷史 */
 function clearHistory() {
     Swal.fire({
         title: '確定清空歷史紀錄？',
@@ -398,9 +404,7 @@ function clearHistory() {
     });
 }
 
-// --------------------
-// 計算 localStorage 用量
-// --------------------
+/** 計算 localStorage 用量，顯示在前端 */
 function updateStorageSize() {
     let total = 0;
     for (let key in localStorage) {
@@ -416,36 +420,39 @@ function updateStorageSize() {
     }
 }
 
-// --------------------
-// 調整機率：將 quantity=0 的機率平攤給其他
-// --------------------
+/***********************************************
+ * 機率分攤與後臺管理相關
+ ***********************************************/
+
+/** 
+ * 依「剩餘獎項」比例分攤機率 
+ *  - quantity=0 的獎項機率歸零，並把這些機率依照「原先 active 的機率比例」分給還有數量的獎項 
+ */
 function adjustProbabilities() {
     const zeroed = prizes.filter(p => p.quantity === 0);
     const active = prizes.filter(p => p.quantity > 0);
 
-    // 若完全沒有還能抽的獎項，就不用分配了
+    // 若完全沒有還能抽的獎項，就不用分配
     if (!active.length) return;
 
-    // 1) 計算所有「抽完獎項」的機率總和
     const sumZeroProb = zeroed.reduce((acc, z) => acc + z.probability, 0);
+    zeroed.forEach(z => {
+        z.probability = 0;
+    });
 
-    // 2) 把抽完的獎項機率歸零
-    zeroed.forEach(z => z.probability = 0);
-
-    // 3) 將 sumZeroProb 按比率分給還有剩餘的獎項
     const sumActiveProb = active.reduce((acc, a) => acc + a.probability, 0);
     if (sumActiveProb > 0 && sumZeroProb > 0) {
         active.forEach(a => {
-            // ratio = (該獎項佔比) = a.probability / sumActiveProb
             const ratio = a.probability / sumActiveProb;
             a.probability += sumZeroProb * ratio;
         });
     }
 }
 
-// --------------------
-// 自動分配機率 (一鍵壓到 100%)
-// --------------------
+/** 
+ * 一鍵壓到 100% 機率 
+ *  - 把加總後的機率重新調整，使總和 = 100 
+ */
 async function distributeProbabilities() {
     const currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
     if (currentTotal === 0) return;
@@ -460,7 +467,6 @@ async function distributeProbabilities() {
     });
 
     let finalTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
-    // 小數誤差 -> 補到 100
     if (finalTotal !== 100) {
         const diff = 100 - finalTotal;
         const active = prizes.filter(x => x.quantity > 0);
@@ -469,10 +475,8 @@ async function distributeProbabilities() {
         }
     }
 
-    // 在設置彈窗中更新顯示
     refreshPrizeTableInModal();
 
-    // 同步寫回 IndexedDB
     try {
         await saveAllPrizes(prizes);
     } catch (err) {
@@ -480,9 +484,7 @@ async function distributeProbabilities() {
     }
 }
 
-// --------------------
-// 新增獎項彈窗
-// --------------------
+/** 在彈窗中新增獎項 */
 function showAddPrizeModal() {
     Swal.fire({
         title: '選擇獎項圖片',
@@ -559,9 +561,7 @@ function showAddPrizeModal() {
     });
 }
 
-// --------------------
-// 匯出獎項 -> Excel (不含圖片的 base64)
-// --------------------
+/** 匯出獎項 -> Excel (不含圖片 base64) */
 function exportPrizesToExcel() {
     const data = prizes.map(p => ({
         名稱: p.name,
@@ -583,9 +583,7 @@ function exportPrizesToExcel() {
     Swal.fire('成功！', '獎項已匯出為 Excel。', 'success');
 }
 
-// --------------------
-// 匯入獎項 (Excel) -> 只匯入基本資訊，不含圖片
-// --------------------
+/** 匯入獎項 (Excel) -> 只匯入文字資訊，不含圖片 */
 function importPrizesFromExcelUI() {
     Swal.fire({
         title: '匯入 Excel',
@@ -670,9 +668,7 @@ async function handlePrizesFile(file) {
     }
 }
 
-// --------------------
-// 重新生成獎項表格 (設置彈窗內)
-// --------------------
+/** 後臺彈窗中，重新生成「獎項表格」 */
 function refreshPrizeTableInModal() {
     const tbody = document.getElementById("prize-table-tbody");
     if (!tbody) return;
@@ -715,15 +711,13 @@ function refreshPrizeTableInModal() {
     const tot = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
     const warnEl = document.getElementById("probability-warning");
     if (warnEl) {
-        warnEl.textContent = (tot === 100)
+        warnEl.textContent = (Math.round(tot) === 100)
           ? "總機率為 100%"
           : `注意：目前總機率為 ${tot.toFixed(2)}%，請調整至 100%`;
     }
 }
 
-// --------------------
-// 更換圖片
-// --------------------
+/** 更換圖片 */
 function updatePrizeImage(index) {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -734,7 +728,6 @@ function updatePrizeImage(index) {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async ev => {
-            // 更新 prizes
             prizes[index].image = ev.target.result; // base64
             try {
                 await saveAllPrizes(prizes);
@@ -749,10 +742,8 @@ function updatePrizeImage(index) {
     fileInput.click();
 }
 
-// --------------------
-// 顯示設置彈窗
-// --------------------
-document.getElementById("settings-btn").addEventListener("click", () => {
+/** 顯示後臺設置彈窗 */
+document.getElementById("settings-btn")?.addEventListener("click", () => {
     let html = `
         <h3>調整獎項設置</h3>
         <table class="prize-table">
@@ -824,9 +815,9 @@ document.getElementById("settings-btn").addEventListener("click", () => {
                 prizes[idx].displayMode = el.value;
             });
 
-            // 檢查機率
-            const total = prizes.reduce((sum, p) => sum + p.probability, 0);
-            if (Math.round(total) !== 100) {
+            // 檢查機率總和
+            const totalProb = prizes.reduce((sum, p) => sum + p.probability, 0);
+            if (Math.round(totalProb) !== 100) {
                 Swal.fire('機率總和不等於 100%！', '請先「自動分配機率」或自行調整', 'warning');
                 return false;
             }
@@ -859,9 +850,7 @@ document.getElementById("settings-btn").addEventListener("click", () => {
     }, 50);
 });
 
-// --------------------
-// 刪除選中
-// --------------------
+/** 刪除選中的獎項 */
 async function deleteSelectedPrizes() {
     const checks = document.querySelectorAll(".swal2-modal .delete-check:checked");
     const toDelete = Array.from(checks).map(cb => parseInt(cb.getAttribute("data-index")));
