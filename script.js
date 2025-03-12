@@ -420,20 +420,25 @@ function updateStorageSize() {
 // 調整機率：將 quantity=0 的機率平攤給其他
 // --------------------
 function adjustProbabilities() {
+    const zeroed = prizes.filter(p => p.quantity === 0);
     const active = prizes.filter(p => p.quantity > 0);
+
+    // 若完全沒有還能抽的獎項，就不用分配了
     if (!active.length) return;
 
-    // 將已被抽完的獎項（quantity=0）機率「分攤」給還能抽的獎項
-    const zeroed = prizes.filter(p => p.quantity === 0);
-    if (zeroed.length > 0) {
-        const sumZeroProb = zeroed.reduce((s, z) => s + z.probability, 0);
-        const add = sumZeroProb / active.length;
-        prizes.forEach(p => {
-            if (p.quantity === 0) {
-                p.probability = 0;
-            } else {
-                p.probability += add;
-            }
+    // 1) 計算所有「抽完獎項」的機率總和
+    const sumZeroProb = zeroed.reduce((acc, z) => acc + z.probability, 0);
+
+    // 2) 把抽完的獎項機率歸零
+    zeroed.forEach(z => z.probability = 0);
+
+    // 3) 將 sumZeroProb 按比率分給還有剩餘的獎項
+    const sumActiveProb = active.reduce((acc, a) => acc + a.probability, 0);
+    if (sumActiveProb > 0 && sumZeroProb > 0) {
+        active.forEach(a => {
+            // ratio = (該獎項佔比) = a.probability / sumActiveProb
+            const ratio = a.probability / sumActiveProb;
+            a.probability += sumZeroProb * ratio;
         });
     }
 }
