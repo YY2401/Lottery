@@ -120,10 +120,15 @@ window.onload = async () => {
     enlargedSize  = parseInt(localStorage.getItem("enlargedSize"))  || 300;
     document.documentElement.style.setProperty('--thumbnail-size', `${thumbnailSize}px`);
 
-    // 4) 初始化機率邏輯
+    // 4) 初始化機率邏輯：動態分配
     adjustProbabilities(); 
     updateHistoryDisplay();
     updateStorageSize();
+
+    // 5) 綁定「測試抽獎」按鈕事件
+    document.getElementById("test-draw-btn")?.addEventListener("click", () => {
+        testDrawLottery();
+    });
 };
 
 /***********************************************
@@ -219,7 +224,8 @@ async function drawSingle() {
         saveToHistory([pickedItem]);
     }
 
-    // 每抽完就分攤機率
+    // 每抽完就再做一次動態分攤
+    adjustProbabilities();
     updateHistoryDisplay();
     updateStorageSize();
 
@@ -234,7 +240,7 @@ async function drawSingle() {
 
 /**
  * 多抽前，先清空顯示區 #result
- * 然後重複呼叫 drawSingle() 指定次數
+ * 然後重複呼叫 drawSingle() 指定次數 (或直接複製單抽邏輯)
  */
 async function drawMultiple(count) {
     // 先清空舊結果
@@ -245,13 +251,6 @@ async function drawMultiple(count) {
         Swal.fire('請輸入抽獎者名稱！', '', 'warning');
         return;
     }
-
-    // 因為多抽是「連續呼叫單抽」,
-    // 但每次單抽都會再次 clear -> 會清掉前面抽到的結果。
-    // 所以要改成呼叫「不會清空」的版本。
-    // 這裡可以直接把「單抽邏輯」複製過來，或另外做個「drawSingleNoClear()」。
-
-    // 以下做一個「不清空」版的單抽邏輯，直接內寫：
 
     for (let i = 0; i < count; i++) {
         const activeItems = prizes.filter(p => p.quantity > 0);
@@ -279,7 +278,7 @@ async function drawMultiple(count) {
         }
 
         if (pickedItem) {
-            // 顯示到 #result (不清空)
+            // 顯示到 #result (不清空，每次疊加)
             const resultDiv = document.getElementById("result");
             if (resultDiv) {
                 const div = document.createElement("div");
@@ -323,14 +322,13 @@ async function drawMultiple(count) {
                 resultDiv.appendChild(div);
             }
 
-            // 寫入歷史紀錄
             saveToHistory([pickedItem]);
         }
 
-        // 每抽完 1 次，就分攤機率
+        // 每抽完 1 次，都再調整機率
+        adjustProbabilities();
         updateStorageSize();
 
-        // 同步更新 IndexedDB
         try {
             await saveAllPrizes(prizes);
         } catch (e) {
@@ -338,12 +336,10 @@ async function drawMultiple(count) {
             Swal.fire('錯誤', '儲存獎項資料時發生錯誤。', 'error');
             break;
         }
-
-        // 可在此加個小延遲，看起來比較有抽卡感
+        // 可加個延遲來模擬抽卡動畫
         // await new Promise(res => setTimeout(res, 300));
     }
 
-    // 最後更新一下歷史顯示 (可放在迴圈外)
     updateHistoryDisplay();
 }
 
@@ -765,7 +761,7 @@ async function handlePrizesFile(file) {
         }
         await saveAllPrizes(prizes);
         adjustProbabilities();
-        Swal.fire('成功', '已從Excel匯入獎項', 'success').then(() => {
+        Swal.fire('成功', '已從 Excel 匯入獎項', 'success').then(() => {
             refreshPrizeTableInModal();
         });
     } catch (err) {
@@ -791,9 +787,9 @@ function refreshPrizeTableInModal() {
             <td><input type="color" class="color-input" value="${p.bgColor || '#ffffff'}" data-bg-color-index="${i}"></td>
             <td>
               <select data-mode-index="${i}" class="mode-select">
-                <option value="name"  ${p.displayMode==='name'?'selected':''}>名稱</option>
-                <option value="image" ${p.displayMode==='image'?'selected':''}>圖片</option>
-                <option value="all"   ${p.displayMode==='all'  ?'selected':''}>全部</option>
+                <option value="name"  ${p.displayMode==='name' ? 'selected' : ''}>名稱</option>
+                <option value="image" ${p.displayMode==='image' ? 'selected' : ''}>圖片</option>
+                <option value="all"   ${p.displayMode==='all'   ? 'selected' : ''}>全部</option>
               </select>
             </td>
             <td>
@@ -813,8 +809,11 @@ function refreshPrizeTableInModal() {
         `;
     }).join('');
 
-    // 更新「總機率」提示文字
-    const tot = prizes.reduce((sum, p) => sum + (p.quantity > 0 ? p.probability : 0), 0);
+    // 更新「總機率」提示文字 (只計算 quantity>0)
+    const tot = prizes
+      .filter(x => x.quantity > 0)
+      .reduce((sum, p) => sum + p.probability, 0);
+
     const warnEl = document.getElementById("probability-warning");
     if (warnEl) {
         warnEl.textContent = (Math.round(tot) === 100)
@@ -921,8 +920,10 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
                 prizes[idx].displayMode = el.value;
             });
 
-            // 檢查機率總和
-            const totalProb = prizes.reduce((sum, p) => sum + p.probability, 0);
+            // 檢查機率總和 (quantity>0)
+            const totalProb = prizes
+              .filter(x => x.quantity > 0)
+              .reduce((sum, p) => sum + p.probability, 0);
             if (Math.round(totalProb) !== 100) {
                 Swal.fire('機率總和不等於 100%！', '請先「自動分配機率」或自行調整', 'warning');
                 return false;
@@ -974,4 +975,128 @@ async function deleteSelectedPrizes() {
         console.error('刪除獎項時發生錯誤:', err);
         Swal.fire('錯誤', '寫入資料庫時發生錯誤。', 'error');
     }
+}
+
+/***********************************************
+ * 模擬抽獎 (不影響真實獎項)，測試用
+ ***********************************************/
+
+/**
+ * 模擬抽獎 count 次（不影響真實 prizes）
+ *  - 會複製一份獎池，並在每抽一次後執行動態分配
+ *  - 回傳：{ "獎項名稱": 出現次數, ... } 形式的計數
+ */
+function simulateDraws(count) {
+    // 1) 複製
+    const clonedPrizes = JSON.parse(JSON.stringify(prizes));
+
+    // 2) 給 clone 用的分配函式
+    function adjustProbForCloned() {
+        const zeroed = clonedPrizes.filter(p => p.quantity === 0);
+        const active = clonedPrizes.filter(p => p.quantity > 0);
+        if (!active.length) return;
+        const sumZeroProb = zeroed.reduce((acc, z) => acc + z.probability, 0);
+        zeroed.forEach(z => { z.probability = 0; });
+        const sumActiveProb = active.reduce((acc, a) => acc + a.probability, 0);
+        if (sumActiveProb > 0 && sumZeroProb > 0) {
+            active.forEach(a => {
+                const ratio = a.probability / sumActiveProb;
+                a.probability += sumZeroProb * ratio;
+            });
+        }
+    }
+
+    // 先調整一次
+    adjustProbForCloned();
+
+    const distribution = {};
+
+    for (let i = 0; i < count; i++) {
+        const activeItems = clonedPrizes.filter(p => p.quantity > 0);
+        if (!activeItems.length) break;
+
+        const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
+        if (totalProb <= 0) break;
+
+        const rand = Math.random() * totalProb;
+        let cumulative = 0;
+        let picked = null;
+        for (const p of activeItems) {
+            cumulative += p.probability;
+            if (rand <= cumulative) {
+                p.quantity--;
+                picked = p;
+                break;
+            }
+        }
+        if (picked) {
+            distribution[picked.name] = (distribution[picked.name] || 0) + 1;
+        }
+
+        // 每抽完一次就再分配
+        adjustProbForCloned();
+    }
+
+    return distribution;
+}
+
+/**
+ * 將分佈物件 + 總抽數 -> 輸出成統計表 (HTML 字串)
+ */
+function buildDistributionTable(dist, totalDraws) {
+    // 先把結果依抽中次數降冪排序
+    const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+    let html = `
+      <table class="history-table" style="margin:0 auto;">
+        <thead>
+          <tr>
+            <th>獎項名稱</th>
+            <th>抽中次數</th>
+            <th>比例(%)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    entries.forEach(([prizeName, count]) => {
+        const ratio = ((count / totalDraws) * 100).toFixed(2);
+        html += `
+          <tr>
+            <td>${prizeName}</td>
+            <td>${count}</td>
+            <td>${ratio}</td>
+          </tr>
+        `;
+    });
+    html += `</tbody></table>`;
+    return html;
+}
+
+/**
+ * 進行「測試抽獎」，各抽 100 次、1000 次並顯示結果
+ */
+function testDrawLottery() {
+    // 1) 模擬
+    const dist100 = simulateDraws(100);
+    const dist1000 = simulateDraws(1000);
+
+    // 2) 組合成 HTML
+    const table100 = buildDistributionTable(dist100, 100);
+    const table1000 = buildDistributionTable(dist1000, 1000);
+
+    const html = `
+      <h3>模擬抽獎 100 次</h3>
+      ${table100}
+      <hr/>
+      <h3>模擬抽獎 1000 次</h3>
+      ${table1000}
+    `;
+
+    // 3) 用 SweetAlert2 顯示
+    Swal.fire({
+        title: '測試抽獎結果',
+        html,
+        width: '800px',
+        showConfirmButton: true,
+        confirmButtonText: '關閉'
+    });
 }
