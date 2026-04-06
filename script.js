@@ -1119,13 +1119,12 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
             <tbody id="prize-table-tbody"></tbody>
           </table>
         </div>
-        <p id="probability-warning" class="prob-warning"></p>
+        <p id="probability-warning" class="prob-warning">儲存時將自動調整機率總和為 100%</p>
       </div>
 
       <div class="settings-toolbar">
         <button type="button" onclick="showAddPrizeModal()" class="stb stb-primary">＋ 新增獎品</button>
         <button type="button" onclick="deleteSelectedPrizes()" class="stb stb-danger">刪除選取</button>
-        <button type="button" onclick="distributeProbabilities()" class="stb stb-default">正規化機率</button>
         <div class="stb-divider"></div>
         <button type="button" onclick="importPrizesFromExcelUI()" class="stb stb-default">匯入</button>
         <button type="button" onclick="exportPrizesToExcel()" class="stb stb-default">匯出</button>
@@ -1187,17 +1186,21 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
         return false;
       }
 
-      const totalProb = prizes
-        .filter((x) => x.quantity > 0)
-        .reduce((sum, p) => sum + p.probability, 0);
-      if (Math.abs(totalProb - 100) > 0.01) {
-        Swal.fire(
-          "機率總和必須為 100%。",
-          "請使用「正規化機率」或手動調整數值。",
-          "warning"
-        );
-        return false;
+      // Auto-normalize probabilities to 100%
+      const activePrizes = prizes.filter((x) => x.quantity > 0);
+      const totalProb = activePrizes.reduce((sum, p) => sum + p.probability, 0);
+      if (totalProb > 0 && Math.abs(totalProb - 100) > 0.01) {
+        const factor = 100 / totalProb;
+        activePrizes.forEach((p) => {
+          p.probability = parseFloat((p.probability * factor).toFixed(2));
+        });
+        // Fix rounding
+        const newTotal = activePrizes.reduce((sum, p) => sum + p.probability, 0);
+        if (newTotal !== 100 && activePrizes.length) {
+          activePrizes[0].probability += 100 - newTotal;
+        }
       }
+      prizes.filter((x) => x.quantity === 0).forEach((p) => { p.probability = 0; });
 
       thumbnailSize = parseInt(document.getElementById("thumbnail-size").value) || 80;
       enlargedSize = parseInt(document.getElementById("enlarged-size").value) || 300;
