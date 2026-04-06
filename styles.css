@@ -244,42 +244,78 @@ button:disabled {
 }
 
 /* ============================
-   Slot Animation
+   Full-screen Draw Overlay
    ============================ */
-.animation-container {
-  width: 280px;
-  height: 80px;
-  margin: 0 auto 20px;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  position: relative;
-  border-radius: 14px;
-  background: var(--slot-gradient);
-  box-shadow: var(--shadow-medium);
-}
-.animation-container.active {
+.draw-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  opacity: 0;
 }
-.slot-reel {
+[data-theme="dark"] .draw-overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+.draw-stage {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.draw-reel-window {
+  width: 320px;
+  height: 70px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 16px;
+  background: var(--slot-gradient);
+  box-shadow: 0 0 40px rgba(102, 126, 234, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+.draw-reel {
   position: absolute;
   width: 100%;
-  text-align: center;
 }
-.slot-item {
-  height: 80px;
+.draw-reel-item {
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 22px;
+  font-weight: 700;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
-  padding: 0 10px;
+  padding: 0 20px;
+  letter-spacing: 1px;
+}
+.draw-flash {
+  position: absolute;
+  inset: -40px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.draw-reveal {
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 20px rgba(74, 158, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  letter-spacing: 2px;
+  text-align: center;
+  max-width: 80vw;
+  word-break: break-word;
+}
+
+/* Hide old animation container */
+.animation-container {
+  display: none !important;
 }
 
 /* ============================

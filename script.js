@@ -146,7 +146,7 @@ window.onload = async () => {
 };
 
 /***********************************************
- * Animation: Slot machine reel
+ * Animation: Full-screen draw experience
  ***********************************************/
 function playSlotAnimation(pickedItem, activeItems) {
   return new Promise((resolve) => {
@@ -155,45 +155,129 @@ function playSlotAnimation(pickedItem, activeItems) {
       return;
     }
 
-    const container = document.getElementById("animation-container");
-    if (!container) { resolve(); return; }
+    // Create fullscreen overlay
+    const overlay = document.createElement("div");
+    overlay.className = "draw-overlay";
+    overlay.innerHTML = `
+      <div class="draw-stage">
+        <div class="draw-reel-window">
+          <div class="draw-reel"></div>
+        </div>
+        <div class="draw-flash"></div>
+        <div class="draw-reveal"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
 
-    container.classList.add("active");
-    container.innerHTML = "";
+    const reel = overlay.querySelector(".draw-reel");
+    const flash = overlay.querySelector(".draw-flash");
+    const reveal = overlay.querySelector(".draw-reveal");
+    const stage = overlay.querySelector(".draw-stage");
 
-    // Build reel: repeat prizes several times, end with picked item
-    const reelNames = [];
-    for (let i = 0; i < 4; i++) {
-      activeItems.forEach((p) => reelNames.push(p.customText || p.name));
+    // Build reel items: shuffle prizes, repeat, end with picked
+    const names = activeItems.map((p) => p.customText || p.name);
+    const reelItems = [];
+    for (let i = 0; i < 6; i++) {
+      const shuffled = [...names].sort(() => Math.random() - 0.5);
+      reelItems.push(...shuffled);
     }
-    reelNames.push(pickedItem.customText || pickedItem.name);
+    reelItems.push(pickedItem.customText || pickedItem.name);
 
-    const reel = document.createElement("div");
-    reel.className = "slot-reel";
-    reelNames.forEach((name) => {
-      const item = document.createElement("div");
-      item.className = "slot-item";
-      item.textContent = name;
-      reel.appendChild(item);
+    reelItems.forEach((name) => {
+      const el = document.createElement("div");
+      el.className = "draw-reel-item";
+      el.textContent = name;
+      reel.appendChild(el);
     });
-    container.appendChild(reel);
 
-    const itemHeight = 80;
-    const finalOffset = -(reelNames.length - 1) * itemHeight;
+    const itemH = 70;
+    const finalOffset = -(reelItems.length - 1) * itemH;
 
-    anime({
+    // Reveal text
+    const revealLabel = pickedItem.customText || pickedItem.name;
+    reveal.textContent = revealLabel;
+
+    // Timeline
+    const tl = anime.timeline();
+
+    // 1. Fade in overlay
+    tl.add({
+      targets: overlay,
+      opacity: [0, 1],
+      duration: 300,
+      easing: "easeOutQuad",
+    });
+
+    // 2. Stage scale in
+    tl.add({
+      targets: stage,
+      scale: [0.8, 1],
+      opacity: [0, 1],
+      duration: 400,
+      easing: "easeOutBack",
+    }, "-=100");
+
+    // 3. Reel spin — fast then decelerate
+    tl.add({
       targets: reel,
       translateY: [0, finalOffset],
-      duration: 2000,
-      easing: "easeOutExpo",
-      complete: () => {
-        setTimeout(() => {
-          container.classList.remove("active");
-          container.innerHTML = "";
-          resolve();
-        }, 300);
-      },
+      duration: 2800,
+      easing: "cubicBezier(0.1, 0.25, 0.1, 1)",
+    }, "-=100");
+
+    // 4. Flash on stop
+    tl.add({
+      targets: flash,
+      opacity: [0, 0.8, 0],
+      duration: 400,
+      easing: "easeOutQuad",
+    }, "-=200");
+
+    // 5. Stage shake
+    tl.add({
+      targets: stage,
+      translateX: [0, -6, 6, -4, 4, 0],
+      duration: 400,
+      easing: "easeInOutQuad",
+    }, "-=300");
+
+    // 6. Hide reel, show reveal text
+    tl.add({
+      targets: overlay.querySelector(".draw-reel-window"),
+      opacity: [1, 0],
+      scale: [1, 0.9],
+      duration: 300,
+      easing: "easeInQuad",
     });
+
+    tl.add({
+      targets: reveal,
+      opacity: [0, 1],
+      scale: [0.5, 1],
+      duration: 500,
+      easing: "spring(1, 80, 10, 0)",
+    }, "-=100");
+
+    // 7. Hold, then exit
+    tl.add({
+      targets: [reveal, stage],
+      opacity: [1, 0],
+      scale: [1, 1.1],
+      duration: 400,
+      delay: 800,
+      easing: "easeInQuad",
+    });
+
+    tl.add({
+      targets: overlay,
+      opacity: [1, 0],
+      duration: 300,
+      easing: "easeInQuad",
+      complete: () => {
+        overlay.remove();
+        resolve();
+      },
+    }, "-=200");
   });
 }
 
