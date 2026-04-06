@@ -334,39 +334,48 @@ function animateResultItems() {
   const tl = anime.timeline({ easing: "easeOutExpo" });
 
   items.forEach((item, i) => {
-    // Phase 1: Fly in + scale up with spring bounce
+    const card = item.querySelector(".card-flip");
+
+    // Phase 1: Card drops in face-down
     tl.add({
       targets: item,
       opacity: [0, 1],
-      scale: [0.3, 1],
-      translateY: [40, 0],
-      rotate: [anime.random(-8, 8), 0],
-      duration: 600,
-      easing: "spring(1, 80, 10, 0)",
-    }, i * 500);
+      scale: [0.5, 1],
+      translateY: [-30, 0],
+      duration: 400,
+      easing: "easeOutBack",
+    }, i * 600);
 
-    // Phase 2: Glow pulse ring
+    // Phase 2: Card flips to reveal
+    tl.add({
+      targets: card,
+      rotateY: [0, 180],
+      duration: 600,
+      easing: "easeInOutQuad",
+    }, i * 600 + 350);
+
+    // Phase 3: Glow pulse on reveal
     tl.add({
       targets: item,
       boxShadow: [
         "0 0 0 0 rgba(74, 158, 255, 0.5)",
-        "0 0 0 12px rgba(74, 158, 255, 0)",
+        "0 0 0 14px rgba(74, 158, 255, 0)",
       ],
       duration: 500,
       easing: "easeOutQuad",
-    }, i * 500 + 400);
+    }, i * 600 + 700);
 
-    // Phase 3: Subtle settle bounce
+    // Phase 4: Settle bounce
     tl.add({
       targets: item,
-      scale: [1, 1.08, 1],
+      scale: [1, 1.06, 1],
       duration: 300,
       easing: "easeInOutQuad",
-    }, i * 500 + 600);
+    }, i * 600 + 900);
   });
 
   // Celebration after all items revealed
-  const totalDelay = (items.length - 1) * 500 + 700;
+  const totalDelay = (items.length - 1) * 600 + 1100;
   setTimeout(() => playCelebration(), totalDelay);
 }
 
@@ -383,33 +392,49 @@ function setDrawButtonsEnabled(enabled) {
  * Build result item DOM element
  ***********************************************/
 function createResultItemElement(pickedItem) {
-  const div = document.createElement("div");
-  div.className = "result-item";
-  div.style.color = pickedItem.textColor || "#333";
-  div.style.backgroundColor = pickedItem.bgColor || "#fff";
+  const wrapper = document.createElement("div");
+  wrapper.className = "result-item";
+
+  const card = document.createElement("div");
+  card.className = "card-flip";
 
   const hasImage = pickedItem.image && pickedItem.image.trim() !== "";
   const label = pickedItem.customText || pickedItem.name;
 
+  // Back face (question mark)
+  const back = document.createElement("div");
+  back.className = "card-face card-back";
+  back.innerHTML = `<span class="card-question">?</span>`;
+
+  // Front face (prize content)
+  const front = document.createElement("div");
+  front.className = "card-face card-front";
+  front.style.color = pickedItem.textColor || "#333";
+  front.style.backgroundColor = pickedItem.bgColor || "#fff";
+
   if (pickedItem.displayMode === "image") {
-    div.innerHTML = hasImage
+    front.innerHTML = hasImage
       ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
       : `<div class="result-text">無圖片</div>`;
   } else if (pickedItem.displayMode === "all") {
     const imgPart = hasImage
       ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
       : `<div class="result-text">無圖片</div>`;
-    div.innerHTML = imgPart + `<div class="result-text">${label}</div>`;
+    front.innerHTML = imgPart + `<div class="result-text">${label}</div>`;
   } else {
-    div.innerHTML = `<div class="result-text">${label}</div>`;
+    front.innerHTML = `<div class="result-text">${label}</div>`;
   }
+
+  card.appendChild(back);
+  card.appendChild(front);
+  wrapper.appendChild(card);
 
   if (hasImage) {
-    div.addEventListener("click", () => showEnlargedImage(pickedItem.image, label));
-    div.style.cursor = "pointer";
+    wrapper.addEventListener("click", () => showEnlargedImage(pickedItem.image, label));
+    wrapper.style.cursor = "pointer";
   }
 
-  return div;
+  return wrapper;
 }
 
 /***********************************************

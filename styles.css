@@ -331,29 +331,60 @@ button:disabled {
 }
 
 .result-item {
+  perspective: 600px;
+  opacity: 0;
+  transform: scale(0);
+  min-width: 100px;
+}
+
+.card-flip {
+  position: relative;
+  width: 100%;
+  min-height: 100px;
+  transform-style: preserve-3d;
+}
+
+.card-face {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  padding: 10px;
+  padding: 12px;
   border-radius: 12px;
-  opacity: 0;
-  transform: scale(0);
   text-align: center;
-  min-width: 90px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  position: absolute;
+  inset: 0;
+  background: var(--slot-gradient);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-medium);
+}
+.card-question {
+  font-size: 36px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-front {
+  transform: rotateY(180deg);
   background: var(--bg-card);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-soft);
 }
-.result-item img {
+
+.card-front img {
   max-width: var(--thumbnail-size, 80px);
   max-height: var(--thumbnail-size, 80px);
   object-fit: contain;
   display: block;
   margin: 0 auto;
 }
-.result-item .result-text {
+.card-front .result-text {
   margin-top: 5px;
   font-size: 16px;
   color: var(--text-result);
