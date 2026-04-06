@@ -926,84 +926,36 @@ function updateStorageSize() {
  * Probability management
  ***********************************************/
 function adjustProbabilities() {
+  // Zero out depleted prizes
   prizes.forEach((p) => {
     if (p.probability < 0) p.probability = 0;
+    if (p.quantity <= 0) p.probability = 0;
   });
-  const zeroed = prizes.filter((p) => p.quantity === 0);
-  const active = prizes.filter((p) => p.quantity > 0);
 
+  const active = prizes.filter((p) => p.quantity > 0);
   if (!active.length) return;
 
-  const sumZeroProb = zeroed.reduce((acc, z) => acc + z.probability, 0);
-  zeroed.forEach((z) => {
-    z.probability = 0;
-  });
-
   const sumActiveProb = active.reduce((acc, a) => acc + a.probability, 0);
+
+  // If all active probabilities are 0, distribute equally
   if (sumActiveProb <= 0) {
     const equalProb = parseFloat((100 / active.length).toFixed(2));
+    active.forEach((a) => { a.probability = equalProb; });
+  } else {
+    // Normalize active probabilities to sum to exactly 100%
+    const factor = 100 / sumActiveProb;
     active.forEach((a) => {
-      a.probability = equalProb;
+      a.probability = parseFloat((a.probability * factor).toFixed(2));
     });
-    const total = active.reduce((acc, a) => acc + a.probability, 0);
-    if (total !== 100) {
-      active[0].probability += 100 - total;
-    }
-    return;
   }
-  if (sumActiveProb > 0 && sumZeroProb > 0) {
-    active.forEach((a) => {
-      const ratio = a.probability / sumActiveProb;
-      a.probability += sumZeroProb * ratio;
-    });
+
+  // Fix rounding error
+  const total = active.reduce((acc, a) => acc + a.probability, 0);
+  if (total !== 100) {
+    active[0].probability = parseFloat((active[0].probability + (100 - total)).toFixed(2));
   }
 }
 
-async function distributeProbabilities() {
-  prizes.forEach((p) => {
-    if (p.probability < 0) p.probability = 0;
-  });
-  let currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
-  if (currentTotal <= 0) {
-    const active = prizes.filter((p) => p.quantity > 0);
-    if (!active.length) return;
-    const equalProb = parseFloat((100 / active.length).toFixed(2));
-    active.forEach((p) => {
-      p.probability = equalProb;
-    });
-    const total = active.reduce((sum, p) => sum + p.probability, 0);
-    if (total !== 100) {
-      active[0].probability += 100 - total;
-    }
-    currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
-  }
-
-  const factor = 100 / currentTotal;
-  prizes.forEach((p) => {
-    if (p.quantity > 0) {
-      p.probability = parseFloat((p.probability * factor).toFixed(2));
-    } else {
-      p.probability = 0;
-    }
-  });
-
-  let finalTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
-  if (finalTotal !== 100) {
-    const diff = 100 - finalTotal;
-    const active = prizes.filter((x) => x.quantity > 0);
-    if (active.length) {
-      active[0].probability += diff;
-    }
-  }
-
-  refreshPrizeTableInModal();
-
-  try {
-    await saveAllPrizes(prizes);
-  } catch (err) {
-    console.error("Failed to normalize probabilities:", err);
-  }
-}
 
 /***********************************************
  * Prize settings modal
