@@ -507,10 +507,23 @@ function saveToHistory(result) {
     });
   });
 
-  if (history.length > 20000) {
+  if (history.length >= 19000 && history.length < 20000) {
+    Swal.fire({
+      title: "紀錄即將達到上限",
+      text: `目前已有 ${history.length.toLocaleString()} 筆紀錄（上限 20,000 筆），建議先匯出 Excel 備份。`,
+      icon: "info",
+      showCancelButton: true,
+      confirmButtonText: "立即匯出",
+      cancelButtonText: "稍後再說",
+    }).then((r) => {
+      if (r.isConfirmed) {
+        exportHistoryToExcel();
+      }
+    });
+  } else if (history.length >= 20000) {
     Swal.fire({
       title: "紀錄已達上限",
-      text: "歷史紀錄已超過 20,000 筆，建議先匯出 Excel 備份後再清空紀錄。",
+      text: "歷史紀錄已達 20,000 筆，請先匯出 Excel 備份後再清空紀錄。",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "匯出並清空",
