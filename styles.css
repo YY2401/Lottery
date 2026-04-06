@@ -897,7 +897,33 @@ mark {
   border-color: var(--accent-blue);
 }
 
-/* SweetAlert2 modal overrides */
+/* ============================
+   SweetAlert2 Global Polish
+   ============================ */
+.swal2-popup {
+  border-radius: 16px !important;
+  padding: 24px !important;
+}
+.swal2-title {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+}
+.swal2-html-container {
+  font-size: 14px !important;
+}
+.swal2-styled.swal2-confirm {
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 10px 24px !important;
+}
+.swal2-styled.swal2-cancel {
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 10px 24px !important;
+}
+
 .swal2-modal .action-btn {
   margin: 10px 5px 0 0;
   padding: 8px 15px;
@@ -917,4 +943,193 @@ mark {
   height: 16px;
   cursor: pointer;
   accent-color: var(--accent-blue);
+}
+
+/* ============================
+   Form Modal (Add Prize, Import)
+   ============================ */
+.form-modal {
+  text-align: left;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.form-field-half {
+  flex: 1;
+  min-width: 0;
+}
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.form-input {
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.form-input:focus {
+  border-color: var(--accent-blue);
+}
+.form-select {
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* File upload zone */
+.file-upload {
+  border: 2px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  position: relative;
+}
+.file-upload:hover {
+  border-color: var(--accent-blue);
+  background-color: var(--bg-table-header);
+}
+.file-input-hidden {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.file-upload-text {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.file-upload-text small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.file-upload-preview {
+  display: none;
+}
+.file-upload-preview img {
+  max-width: 120px;
+  max-height: 120px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.file-upload-name {
+  display: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-blue);
+}
+
+/* Color picker */
+.form-color-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.form-color {
+  width: 40px;
+  height: 36px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+}
+.form-color::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.form-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+.form-color-hex {
+  font-size: 13px;
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+/* ============================
+   Simulation Modal
+   ============================ */
+.sim-modal {
+  text-align: left;
+}
+.sim-section {
+  margin-bottom: 20px;
+}
+.sim-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-light);
+}
+.sim-table-wrap {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.sim-table th {
+  background: var(--bg-table-header);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.sim-table td {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+}
+.sim-table tr:last-child td {
+  border-bottom: none;
+}
+.sim-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sim-bar-wrap span {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 42px;
+  text-align: right;
+}
+.sim-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent-blue);
+  min-width: 2px;
+  max-width: 120px;
+  transition: width 0.3s;
 }

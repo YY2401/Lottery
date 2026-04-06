@@ -842,23 +842,81 @@ function showAddPrizeModal() {
   Swal.fire({
     title: "新增獎品",
     html: `
-      <input type="file" id="prize-image" accept=".png,.jpg,.jpeg" style="margin:10px 0;">
-      <div>機率(%): <input type="number" id="new-prob" min="0" max="100" value="10" style="margin:10px 0;"></div>
-      <div>數量: <input type="number" id="new-qty" min="0" value="5" style="margin:10px 0;"></div>
-      <div>顯示文字: <input type="text" id="new-text" placeholder="選填" style="margin:10px 0;"></div>
-      <div>文字顏色: <input type="color" id="text-color" value="#333333" style="margin:10px 0;"></div>
-      <div>背景顏色: <input type="color" id="bg-color" value="#ffffff" style="margin:10px 0;"></div>
-      <div>顯示模式:
-        <select id="display-mode">
-          <option value="name">名稱</option>
-          <option value="image">圖片</option>
-          <option value="all">兩者</option>
-        </select>
+      <div class="form-modal">
+        <label class="form-field">
+          <span class="form-label">圖片</span>
+          <div class="file-upload" id="file-upload-zone">
+            <input type="file" id="prize-image" accept=".png,.jpg,.jpeg" class="file-input-hidden">
+            <div class="file-upload-text">點擊選擇圖片<br><small>支援 PNG、JPG</small></div>
+            <div class="file-upload-preview" id="file-preview"></div>
+          </div>
+        </label>
+        <div class="form-row">
+          <label class="form-field form-field-half">
+            <span class="form-label">機率 (%)</span>
+            <input type="number" id="new-prob" min="0" max="100" value="10" class="form-input">
+          </label>
+          <label class="form-field form-field-half">
+            <span class="form-label">數量</span>
+            <input type="number" id="new-qty" min="0" value="5" class="form-input">
+          </label>
+        </div>
+        <label class="form-field">
+          <span class="form-label">顯示文字</span>
+          <input type="text" id="new-text" placeholder="選填，預設為檔名" class="form-input">
+        </label>
+        <div class="form-row">
+          <label class="form-field form-field-half">
+            <span class="form-label">文字顏色</span>
+            <div class="form-color-wrap">
+              <input type="color" id="text-color" value="#333333" class="form-color">
+              <span class="form-color-hex" id="text-color-hex">#333333</span>
+            </div>
+          </label>
+          <label class="form-field form-field-half">
+            <span class="form-label">背景顏色</span>
+            <div class="form-color-wrap">
+              <input type="color" id="bg-color" value="#ffffff" class="form-color">
+              <span class="form-color-hex" id="bg-color-hex">#ffffff</span>
+            </div>
+          </label>
+        </div>
+        <label class="form-field">
+          <span class="form-label">顯示模式</span>
+          <select id="display-mode" class="form-select">
+            <option value="name">名稱</option>
+            <option value="image">圖片</option>
+            <option value="all">兩者</option>
+          </select>
+        </label>
       </div>
     `,
+    width: "420px",
     showCancelButton: true,
     confirmButtonText: "新增",
     cancelButtonText: "取消",
+    didOpen: () => {
+      // File upload preview
+      const fileInput = document.getElementById("prize-image");
+      const zone = document.getElementById("file-upload-zone");
+      const preview = document.getElementById("file-preview");
+      zone?.addEventListener("click", () => fileInput?.click());
+      fileInput?.addEventListener("change", () => {
+        if (fileInput.files?.length) {
+          const url = URL.createObjectURL(fileInput.files[0]);
+          preview.innerHTML = `<img src="${url}" alt="preview">`;
+          preview.style.display = "block";
+          zone.querySelector(".file-upload-text").style.display = "none";
+        }
+      });
+      // Color hex display
+      document.getElementById("text-color")?.addEventListener("input", (e) => {
+        document.getElementById("text-color-hex").textContent = e.target.value;
+      });
+      document.getElementById("bg-color")?.addEventListener("input", (e) => {
+        document.getElementById("bg-color-hex").textContent = e.target.value;
+      });
+    },
     preConfirm: () => {
       const fileInput = document.getElementById("prize-image");
       const probability = parseFloat(document.getElementById("new-prob").value) || 10;
@@ -942,10 +1000,34 @@ function exportPrizesToExcel() {
 function importPrizesFromExcelUI() {
   Swal.fire({
     title: "匯入 Excel",
-    html: `<input type="file" id="prizeFile" accept=".xlsx, .xls" />`,
+    html: `
+      <div class="form-modal">
+        <label class="form-field">
+          <span class="form-label">選擇檔案</span>
+          <div class="file-upload" id="import-upload-zone">
+            <input type="file" id="prizeFile" accept=".xlsx, .xls" class="file-input-hidden">
+            <div class="file-upload-text">點擊選擇 Excel 檔案<br><small>支援 .xlsx、.xls</small></div>
+            <div class="file-upload-name" id="import-file-name"></div>
+          </div>
+        </label>
+      </div>
+    `,
+    width: "400px",
     showCancelButton: true,
     confirmButtonText: "匯入",
     cancelButtonText: "取消",
+    didOpen: () => {
+      const fileInput = document.getElementById("prizeFile");
+      const zone = document.getElementById("import-upload-zone");
+      zone?.addEventListener("click", () => fileInput?.click());
+      fileInput?.addEventListener("change", () => {
+        if (fileInput.files?.length) {
+          document.getElementById("import-file-name").textContent = fileInput.files[0].name;
+          document.getElementById("import-file-name").style.display = "block";
+          zone.querySelector(".file-upload-text").style.display = "none";
+        }
+      });
+    },
     preConfirm: () => {
       const fileInput = document.getElementById("prizeFile");
       if (!fileInput.files || fileInput.files.length === 0) {
@@ -1303,27 +1385,27 @@ function simulateDraws(count) {
 function buildDistributionTable(dist, totalDraws) {
   const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
   let html = `
-    <table class="history-table" style="margin:0 auto;">
-      <thead>
-        <tr>
-          <th>獎品</th>
-          <th>次數</th>
-          <th>比率 (%)</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div class="sim-table-wrap">
+      <table class="sim-table">
+        <thead><tr><th>獎品</th><th>次數</th><th>比率</th></tr></thead>
+        <tbody>
   `;
   entries.forEach(([prizeName, count]) => {
-    const ratio = ((count / totalDraws) * 100).toFixed(2);
+    const ratio = ((count / totalDraws) * 100).toFixed(1);
     html += `
       <tr>
         <td>${prizeName}</td>
         <td>${count}</td>
-        <td>${ratio}</td>
+        <td>
+          <div class="sim-bar-wrap">
+            <div class="sim-bar" style="width:${ratio}%"></div>
+            <span>${ratio}%</span>
+          </div>
+        </td>
       </tr>
     `;
   });
-  html += `</tbody></table>`;
+  html += `</tbody></table></div>`;
   return html;
 }
 
@@ -1335,17 +1417,22 @@ function testDrawLottery() {
   const table1000 = buildDistributionTable(dist1000, 1000);
 
   const html = `
-    <h3>模擬抽獎：100 次</h3>
-    ${table100}
-    <hr/>
-    <h3>模擬抽獎：1000 次</h3>
-    ${table1000}
+    <div class="sim-modal">
+      <div class="sim-section">
+        <div class="sim-section-title">模擬 100 次</div>
+        ${table100}
+      </div>
+      <div class="sim-section">
+        <div class="sim-section-title">模擬 1000 次</div>
+        ${table1000}
+      </div>
+    </div>
   `;
 
   Swal.fire({
     title: "模擬結果",
     html,
-    width: "800px",
+    width: "560px",
     showConfirmButton: true,
     confirmButtonText: "確定",
   });
