@@ -57,6 +57,7 @@ let prizes = [];
 let thumbnailSize = 80;
 let enlargedSize = 300;
 let isDrawing = false;
+let drawCount = parseInt(localStorage.getItem("drawCount")) || 0;
 let historyPage = 1;
 const HISTORY_PAGE_SIZE = 50;
 
@@ -125,6 +126,7 @@ window.onload = async () => {
   adjustProbabilities();
   applyHistoryFilters();
   updateStorageSize();
+  updateDrawCounter();
 
   document.getElementById("test-draw-btn")?.addEventListener("click", () => {
     testDrawLottery();
@@ -488,6 +490,7 @@ async function drawSingle() {
     }
 
     saveToHistory([pickedItem]);
+    incrementDrawCount(1);
   }
 
   adjustProbabilities();
@@ -549,6 +552,7 @@ async function drawMultiple(count) {
     if (pickedItem) {
       allPicked.push(pickedItem);
       saveToHistory([pickedItem]);
+      incrementDrawCount(1);
     }
 
     adjustProbabilities();
@@ -896,9 +900,12 @@ function clearHistory() {
   }).then((r) => {
     if (r.isConfirmed) {
       localStorage.removeItem("lotteryHistory");
+      drawCount = 0;
+      localStorage.setItem("drawCount", 0);
       historyPage = 1;
       applyHistoryFilters();
       updateStorageSize();
+      updateDrawCounter();
       Swal.fire("紀錄已清空。", "", "success");
     }
   });
@@ -919,6 +926,24 @@ function updateStorageSize() {
   const el = document.getElementById("storage-size");
   if (el) {
     el.textContent = `儲存空間：${kb} KB (${mb} MB)`;
+  }
+}
+
+/***********************************************
+ * Draw Counter
+ ***********************************************/
+function incrementDrawCount(n) {
+  drawCount += n;
+  localStorage.setItem("drawCount", drawCount);
+  updateDrawCounter();
+}
+
+function updateDrawCounter() {
+  const el = document.getElementById("draw-counter");
+  if (el) {
+    el.innerHTML = drawCount > 0
+      ? `累計抽獎 <span class="draw-counter-num">${drawCount.toLocaleString()}</span> 次`
+      : "";
   }
 }
 
