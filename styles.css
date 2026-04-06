@@ -300,12 +300,15 @@ button:disabled {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 10px;
+  border-radius: 12px;
   opacity: 0;
   transform: scale(0);
   text-align: center;
   min-width: 90px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-soft);
 }
 .result-item img {
   max-width: var(--thumbnail-size, 80px);

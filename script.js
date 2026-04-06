@@ -243,14 +243,47 @@ function playCelebration() {
  ***********************************************/
 function animateResultItems() {
   if (typeof anime === "undefined") return;
-  anime({
-    targets: "#result .result-item",
-    opacity: [0, 1],
-    scale: [0, 1],
-    delay: anime.stagger(500),
-    duration: 500,
-    easing: "easeOutBack",
+
+  const items = document.querySelectorAll("#result .result-item");
+  if (!items.length) return;
+
+  const tl = anime.timeline({ easing: "easeOutExpo" });
+
+  items.forEach((item, i) => {
+    // Phase 1: Fly in + scale up with spring bounce
+    tl.add({
+      targets: item,
+      opacity: [0, 1],
+      scale: [0.3, 1],
+      translateY: [40, 0],
+      rotate: [anime.random(-8, 8), 0],
+      duration: 600,
+      easing: "spring(1, 80, 10, 0)",
+    }, i * 500);
+
+    // Phase 2: Glow pulse ring
+    tl.add({
+      targets: item,
+      boxShadow: [
+        "0 0 0 0 rgba(74, 158, 255, 0.5)",
+        "0 0 0 12px rgba(74, 158, 255, 0)",
+      ],
+      duration: 500,
+      easing: "easeOutQuad",
+    }, i * 500 + 400);
+
+    // Phase 3: Subtle settle bounce
+    tl.add({
+      targets: item,
+      scale: [1, 1.08, 1],
+      duration: 300,
+      easing: "easeInOutQuad",
+    }, i * 500 + 600);
   });
+
+  // Celebration after all items revealed
+  const totalDelay = (items.length - 1) * 500 + 700;
+  setTimeout(() => playCelebration(), totalDelay);
 }
 
 /***********************************************
@@ -345,7 +378,6 @@ async function drawSingle() {
       animateResultItems();
     }
 
-    playCelebration();
     saveToHistory([pickedItem]);
   }
 
@@ -428,7 +460,6 @@ async function drawMultiple(count) {
       resultDiv.appendChild(createResultItemElement(item));
     });
     animateResultItems();
-    playCelebration();
   }
 
   applyHistoryFilters();
