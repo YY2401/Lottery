@@ -61,6 +61,32 @@ let historyPage = 1;
 const HISTORY_PAGE_SIZE = 50;
 
 /***********************************************
+ * Theme: Light / Dark
+ ***********************************************/
+function initTheme() {
+  const saved = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const theme = saved || (prefersDark ? "dark" : "light");
+  applyTheme(theme);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+  const btn = document.getElementById("theme-toggle");
+  if (btn) btn.textContent = theme === "dark" ? "☀��" : "🌙";
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  applyTheme(current === "dark" ? "light" : "dark");
+}
+
+// Apply theme immediately (before onload) to avoid flash
+initTheme();
+document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
+
+/***********************************************
  * Init
  ***********************************************/
 window.onload = async () => {

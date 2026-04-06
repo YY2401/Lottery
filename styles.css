@@ -1,15 +1,140 @@
+/* ============================
+   CSS Variables: Light & Dark
+   ============================ */
+:root {
+  --bg-primary: #f0f0f0;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-table-header: #f2f2f2;
+  --bg-stats: linear-gradient(135deg, #e8f4fd, #f0e6ff);
+  --bg-input: #ffffff;
+  --bg-history: #ffffff;
+
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-result: #333333;
+
+  --border-color: #cccccc;
+  --border-light: #e0e0e0;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 4px 15px rgba(0, 0, 0, 0.12);
+
+  --highlight-bg: #fff3cd;
+  --slot-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  --accent-blue: #007bff;
+  --accent-blue-hover: #0056b3;
+  --accent-green: #28a745;
+  --accent-green-hover: #218838;
+  --accent-red: #dc3545;
+  --accent-red-hover: #c82333;
+  --accent-teal: #17a2b8;
+  --accent-teal-hover: #138496;
+  --accent-gray: #6c757d;
+  --accent-gray-hover: #5a6268;
+  --accent-copy: #4caf50;
+  --accent-copy-hover: #45a049;
+  --accent-export: #2196f3;
+  --accent-export-hover: #1976d2;
+
+  --btn-disabled-bg: #cccccc;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-card: #1e2a45;
+  --bg-table-header: #253352;
+  --bg-stats: linear-gradient(135deg, #1e2a45, #2a1e45);
+  --bg-input: #253352;
+  --bg-history: #1e2a45;
+
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a8b8;
+  --text-muted: #707a8a;
+  --text-result: #e0e0e0;
+
+  --border-color: #3a4560;
+  --border-light: #2e3a52;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 4px 15px rgba(0, 0, 0, 0.4);
+
+  --highlight-bg: #4a3f20;
+  --slot-gradient: linear-gradient(135deg, #4a3f8a 0%, #5a2d7a 100%);
+
+  --accent-blue: #4a9eff;
+  --accent-blue-hover: #3a8eef;
+  --accent-green: #3dbe5a;
+  --accent-green-hover: #2eae4a;
+  --accent-red: #e85d6c;
+  --accent-red-hover: #d84a5a;
+  --accent-teal: #35c4dc;
+  --accent-teal-hover: #28b4cc;
+  --accent-gray: #8892a0;
+  --accent-gray-hover: #78828e;
+  --accent-copy: #56c45e;
+  --accent-copy-hover: #48b450;
+  --accent-export: #4aa8f5;
+  --accent-export-hover: #3a98e5;
+
+  --btn-disabled-bg: #3a4560;
+
+  color-scheme: dark;
+}
+
+/* ============================
+   Base
+   ============================ */
 body {
   font-family: Arial, sans-serif;
   text-align: center;
   padding: 20px;
-  background-color: #f0f0f0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 h1,
 h2 {
-  color: #333;
+  color: var(--text-primary);
 }
 
+/* ============================
+   Theme Toggle
+   ============================ */
+.theme-toggle {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: var(--shadow-soft);
+  transition: background-color 0.3s, border-color 0.3s, transform 0.2s;
+  padding: 0;
+  color: var(--text-primary);
+}
+.theme-toggle:hover {
+  transform: scale(1.1);
+  background-color: var(--bg-table-header);
+}
+
+/* ============================
+   Buttons
+   ============================ */
 .buttons {
   margin: 20px 0;
 }
@@ -17,7 +142,7 @@ button {
   padding: 12px 24px;
   margin: 5px;
   font-size: 16px;
-  background-color: #007bff;
+  background-color: var(--accent-blue);
   color: white;
   border: none;
   border-radius: 8px;
@@ -25,7 +150,7 @@ button {
   transition: background-color 0.2s;
 }
 button:hover {
-  background-color: #0056b3;
+  background-color: var(--accent-blue-hover);
 }
 button:disabled {
   opacity: 0.5;
@@ -37,7 +162,7 @@ button:disabled {
   top: 10px;
   right: 10px;
   padding: 12px 20px;
-  background-color: #28a745;
+  background-color: var(--accent-green);
   color: white;
   border: none;
   border-radius: 8px;
@@ -46,9 +171,12 @@ button:disabled {
   transition: background-color 0.2s;
 }
 .settings-btn:hover {
-  background-color: #218838;
+  background-color: var(--accent-green-hover);
 }
 
+/* ============================
+   Input
+   ============================ */
 .input-section {
   margin: 20px 0;
   text-align: center;
@@ -57,16 +185,22 @@ button:disabled {
 .input-section label {
   font-size: 16px;
   margin-right: 10px;
+  color: var(--text-primary);
 }
 .input-section input[type="text"] {
   padding: 8px;
   font-size: 16px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   width: 200px;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
 }
 
-/* -- 動畫容器 (老虎機) -- */
+/* ============================
+   Slot Animation
+   ============================ */
 .animation-container {
   width: 260px;
   height: 80px;
@@ -77,8 +211,8 @@ button:disabled {
   overflow: hidden;
   position: relative;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  background: var(--slot-gradient);
+  box-shadow: var(--shadow-medium);
 }
 .animation-container.active {
   display: flex;
@@ -103,7 +237,9 @@ button:disabled {
   padding: 0 10px;
 }
 
-/* -- 抽獎結果 -- */
+/* ============================
+   Draw Results
+   ============================ */
 .result {
   margin-top: 20px;
   display: flex;
@@ -131,10 +267,12 @@ button:disabled {
 .result-item .result-text {
   margin-top: 5px;
   font-size: 16px;
-  color: #333;
+  color: var(--text-result);
 }
 
-/* -- 粒子慶祝 -- */
+/* ============================
+   Particles
+   ============================ */
 .particle-container {
   position: fixed;
   top: 0;
@@ -151,7 +289,9 @@ button:disabled {
   pointer-events: none;
 }
 
-/* -- 歷史紀錄 -- */
+/* ============================
+   History Section
+   ============================ */
 .history-section {
   margin: 20px auto;
   max-width: 800px;
@@ -171,17 +311,21 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 4px;
+  color: var(--text-secondary);
 }
 .history-filters input[type="date"] {
   padding: 6px;
   font-size: 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 5px;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
 }
 .filter-btn {
   padding: 8px 16px;
   font-size: 14px;
-  background-color: #17a2b8;
+  background-color: var(--accent-teal);
   color: white;
   border: none;
   border-radius: 5px;
@@ -189,13 +333,13 @@ button:disabled {
   transition: background-color 0.2s;
 }
 .filter-btn:hover {
-  background-color: #138496;
+  background-color: var(--accent-teal-hover);
 }
 .filter-btn-reset {
-  background-color: #6c757d;
+  background-color: var(--accent-gray);
 }
 .filter-btn-reset:hover {
-  background-color: #5a6268;
+  background-color: var(--accent-gray-hover);
 }
 
 .history-search {
@@ -203,8 +347,11 @@ button:disabled {
   max-width: 200px;
   padding: 8px;
   font-size: 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 5px;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
 }
 
 .history-stats {
@@ -213,11 +360,11 @@ button:disabled {
   gap: 15px;
   justify-content: center;
   padding: 10px 15px;
-  background: linear-gradient(135deg, #e8f4fd, #f0e6ff);
+  background: var(--bg-stats);
   border-radius: 8px;
   margin-bottom: 10px;
   font-size: 14px;
-  color: #444;
+  color: var(--text-secondary);
 }
 .history-stats:empty {
   display: none;
@@ -229,26 +376,28 @@ button:disabled {
 }
 .stat-value {
   font-weight: bold;
-  color: #007bff;
+  color: var(--accent-blue);
 }
 
 .record-count {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   margin-right: 15px;
 }
 .storage-size {
   font-size: 13px;
-  color: #999;
+  color: var(--text-muted);
 }
 
 .history {
   margin-top: 10px;
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0;
+  background-color: var(--bg-history);
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
 .history-pagination {
@@ -258,6 +407,7 @@ button:disabled {
   gap: 10px;
   margin-top: 10px;
   font-size: 14px;
+  color: var(--text-secondary);
 }
 .history-pagination:empty {
   display: none;
@@ -265,24 +415,27 @@ button:disabled {
 .page-btn {
   padding: 6px 14px;
   font-size: 13px;
-  background-color: #007bff;
+  background-color: var(--accent-blue);
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
 }
 .page-btn:hover {
-  background-color: #0056b3;
+  background-color: var(--accent-blue-hover);
 }
 .page-btn:disabled {
-  background-color: #ccc;
+  background-color: var(--btn-disabled-bg);
   cursor: not-allowed;
 }
 
+/* ============================
+   Action Buttons (bottom)
+   ============================ */
 .clear-btn {
   margin-top: 10px;
   padding: 10px 20px;
-  background-color: #dc3545;
+  background-color: var(--accent-red);
   color: white;
   border: none;
   border-radius: 8px;
@@ -290,33 +443,38 @@ button:disabled {
   transition: background-color 0.2s;
 }
 .clear-btn:hover {
-  background-color: #c82333;
+  background-color: var(--accent-red-hover);
 }
 
 #copy-btn {
   margin-left: 10px;
-  background-color: #4caf50;
+  background-color: var(--accent-copy);
 }
 #copy-btn:hover {
-  background-color: #45a049;
+  background-color: var(--accent-copy-hover);
 }
 
 #export-btn {
   margin-left: 10px;
-  background-color: #2196f3;
+  background-color: var(--accent-export);
 }
 #export-btn:hover {
-  background-color: #1976d2;
+  background-color: var(--accent-export-hover);
 }
 
-/* -- 搜尋高亮 -- */
+/* ============================
+   Search Highlight
+   ============================ */
 mark {
-  background-color: #fff3cd;
+  background-color: var(--highlight-bg);
+  color: var(--text-primary);
   padding: 0 2px;
   border-radius: 2px;
 }
 
-/* -- SweetAlert2 (設置彈窗) -- */
+/* ============================
+   Tables
+   ============================ */
 .prize-table,
 .history-table {
   width: 100%;
@@ -327,25 +485,65 @@ mark {
 .prize-table td,
 .history-table th,
 .history-table td {
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   padding: 8px;
   text-align: center;
 }
 .prize-table th,
 .history-table th {
-  background-color: #f2f2f2;
+  background-color: var(--bg-table-header);
   font-weight: bold;
+  color: var(--text-primary);
+}
+.history-table td {
+  color: var(--text-primary);
+}
+
+/* ============================
+   SweetAlert2 Dark Mode Override
+   ============================ */
+[data-theme="dark"] .swal2-popup {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .swal2-title {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .swal2-html-container {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .swal2-input,
+[data-theme="dark"] .swal2-textarea,
+[data-theme="dark"] .swal2-select {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .prize-table th,
+[data-theme="dark"] .history-table th {
+  background-color: var(--bg-table-header);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .prize-table td,
+[data-theme="dark"] .history-table td {
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .prize-table input,
+[data-theme="dark"] .prize-table select {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .swal2-modal .action-btn {
   margin: 10px 5px 0 0;
   padding: 8px 15px;
-  background-color: #17a2b8;
+  background-color: var(--accent-teal);
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
 }
 .swal2-modal .action-btn:hover {
-  background-color: #138496;
+  background-color: var(--accent-teal-hover);
 }
