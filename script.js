@@ -900,7 +900,9 @@ function showAddPrizeModal() {
       const fileInput = document.getElementById("prize-image");
       const zone = document.getElementById("file-upload-zone");
       const preview = document.getElementById("file-preview");
-      zone?.addEventListener("click", () => fileInput?.click());
+      zone?.addEventListener("click", (e) => {
+        if (e.target !== fileInput) fileInput?.click();
+      });
       fileInput?.addEventListener("change", () => {
         if (fileInput.files?.length) {
           const url = URL.createObjectURL(fileInput.files[0]);
@@ -1019,7 +1021,9 @@ function importPrizesFromExcelUI() {
     didOpen: () => {
       const fileInput = document.getElementById("prizeFile");
       const zone = document.getElementById("import-upload-zone");
-      zone?.addEventListener("click", () => fileInput?.click());
+      zone?.addEventListener("click", (e) => {
+        if (e.target !== fileInput) fileInput?.click();
+      });
       fileInput?.addEventListener("change", () => {
         if (fileInput.files?.length) {
           document.getElementById("import-file-name").textContent = fileInput.files[0].name;
