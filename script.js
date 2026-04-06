@@ -1148,10 +1148,13 @@ function refreshPrizeTableInModal() {
 
   const warnEl = document.getElementById("probability-warning");
   if (warnEl) {
-    warnEl.textContent =
-      Math.round(tot) === 100
-        ? "✓ 機率總和為 100%"
-        : `⚠ 機率總和為 ${tot.toFixed(2)}%，請正規化至 100%`;
+    if (prizes.every((p) => p.quantity === 0)) {
+      warnEl.textContent = "所有獎品數量皆為 0，請調整數量";
+    } else if (Math.round(tot) === 100) {
+      warnEl.textContent = "✓ 機率總和為 100%";
+    } else {
+      warnEl.textContent = `機率總和為 ${tot.toFixed(2)}%，儲存時將自動調整為 100%`;
+    }
   }
 }
 
