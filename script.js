@@ -94,7 +94,7 @@ window.onload = async () => {
     await initDB();
   } catch (err) {
     console.error("IndexedDB init failed:", err);
-    Swal.fire("Error", "IndexedDB is unavailable. Some features may not work.", "error");
+    Swal.fire("錯誤", "IndexedDB 無法使用，部分功能可能無法運作。", "error");
   }
 
   try {
@@ -264,11 +264,11 @@ function createResultItemElement(pickedItem) {
   if (pickedItem.displayMode === "image") {
     div.innerHTML = hasImage
       ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
-      : `<div class="result-text">No image</div>`;
+      : `<div class="result-text">無圖片</div>`;
   } else if (pickedItem.displayMode === "all") {
     const imgPart = hasImage
       ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
-      : `<div class="result-text">No image</div>`;
+      : `<div class="result-text">無圖片</div>`;
     div.innerHTML = imgPart + `<div class="result-text">${label}</div>`;
   } else {
     div.innerHTML = `<div class="result-text">${label}</div>`;
@@ -291,19 +291,19 @@ async function drawSingle() {
 
   const playerName = document.getElementById("player-name")?.value.trim();
   if (!playerName) {
-    Swal.fire("Please enter a player name.", "", "warning");
+    Swal.fire("請輸入抽獎者名稱。", "", "warning");
     return;
   }
 
   const activeItems = prizes.filter((p) => p.quantity > 0);
   if (!activeItems.length) {
-    Swal.fire("No prizes left.", "Please add prizes in Settings.", "warning");
+    Swal.fire("獎品已抽完。", "請至設置中新增獎品。", "warning");
     return;
   }
 
   const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
   if (totalProb <= 0) {
-    Swal.fire("All active prizes have 0 probability.", "", "warning");
+    Swal.fire("所有獎品的機率皆為 0。", "", "warning");
     return;
   }
 
@@ -344,7 +344,7 @@ async function drawSingle() {
     await saveAllPrizes(prizes);
   } catch (e) {
     console.error("Failed to save IndexedDB:", e);
-    Swal.fire("Error", "Failed to save prize data.", "error");
+    Swal.fire("錯誤", "獎品資料儲存失敗。", "error");
   }
 
   setDrawButtonsEnabled(true);
@@ -359,7 +359,7 @@ async function drawMultiple(count) {
 
   const playerName = document.getElementById("player-name")?.value.trim();
   if (!playerName) {
-    Swal.fire("Please enter a player name.", "", "warning");
+    Swal.fire("請輸入抽獎者名稱。", "", "warning");
     return;
   }
 
@@ -370,12 +370,12 @@ async function drawMultiple(count) {
   for (let i = 0; i < count; i++) {
     const activeItems = prizes.filter((p) => p.quantity > 0);
     if (!activeItems.length) {
-      Swal.fire("No prizes left.", "Please add prizes in Settings.", "warning");
+      Swal.fire("獎品已抽完。", "請至設置中新增獎品。", "warning");
       break;
     }
     const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
     if (totalProb <= 0) {
-      Swal.fire("All active prizes have 0 probability.", "", "warning");
+      Swal.fire("所有獎品的機率皆為 0。", "", "warning");
       break;
     }
 
@@ -403,7 +403,7 @@ async function drawMultiple(count) {
       await saveAllPrizes(prizes);
     } catch (e) {
       console.error("Failed to save IndexedDB:", e);
-      Swal.fire("Error", "Failed to save prize data.", "error");
+      Swal.fire("錯誤", "獎品資料儲存失敗。", "error");
       break;
     }
   }
@@ -469,7 +469,7 @@ function saveToHistory(result) {
     localStorage.setItem("lotteryHistory", JSON.stringify(history));
   } catch (e) {
     if (e.name === "QuotaExceededError") {
-      Swal.fire("Storage full.", "History has been cleared.", "error");
+      Swal.fire("儲存空間已滿。", "歷史紀錄已被清除。", "error");
       localStorage.removeItem("lotteryHistory");
     }
   }
@@ -671,14 +671,14 @@ document.getElementById("history-search")?.addEventListener("input", () => {
 function copyHistoryToClipboard() {
   const hist = (JSON.parse(localStorage.getItem("lotteryHistory")) || [])
     .filter((x) => !x.isSeparator);
-  let csv = "Player,Prize,Time\n";
+  let csv = "抽獎者,獎品,時間\n";
   hist.forEach((item) => {
     csv += `${item.player},${item.customText || item.name},${item.time}\n`;
   });
   navigator.clipboard
     .writeText(csv)
-    .then(() => Swal.fire("Copied.", "History copied to clipboard.", "success"))
-    .catch(() => Swal.fire("Error", "Copy failed.", "error"));
+    .then(() => Swal.fire("已複製。", "歷史紀錄已複製到剪貼簿。", "success"))
+    .catch(() => Swal.fire("錯誤", "複製失敗。", "error"));
 }
 document.getElementById("copy-btn")?.addEventListener("click", copyHistoryToClipboard);
 
@@ -686,19 +686,19 @@ function exportHistoryToExcel() {
   const hist = (JSON.parse(localStorage.getItem("lotteryHistory")) || [])
     .filter((x) => !x.isSeparator);
   const data = hist.map((item) => ({
-    Player: item.player,
-    Prize: item.customText || item.name,
-    Time: item.time,
+    抽獎者: item.player,
+    獎品: item.customText || item.name,
+    時間: item.time,
   }));
   if (typeof XLSX === "undefined") {
-    Swal.fire("Missing SheetJS.", "", "error");
+    Swal.fire("缺少 SheetJS。", "", "error");
     return;
   }
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "LotteryHistory");
+  XLSX.utils.book_append_sheet(wb, ws, "抽獎紀錄");
   XLSX.writeFile(wb, "lottery_history.xlsx");
-  Swal.fire("Exported.", "History saved to Excel.", "success");
+  Swal.fire("已匯出。", "歷史紀錄已儲存為 Excel。", "success");
 }
 document.getElementById("export-btn")?.addEventListener("click", exportHistoryToExcel);
 
@@ -827,25 +827,25 @@ async function distributeProbabilities() {
  ***********************************************/
 function showAddPrizeModal() {
   Swal.fire({
-    title: "Add prize",
+    title: "新增獎品",
     html: `
       <input type="file" id="prize-image" accept=".png,.jpg,.jpeg" style="margin:10px 0;">
-      <div>Probability(%): <input type="number" id="new-prob" min="0" max="100" value="10" style="margin:10px 0;"></div>
-      <div>Quantity: <input type="number" id="new-qty" min="0" value="5" style="margin:10px 0;"></div>
-      <div>Display text: <input type="text" id="new-text" placeholder="Optional label" style="margin:10px 0;"></div>
-      <div>Text color: <input type="color" id="text-color" value="#333333" style="margin:10px 0;"></div>
-      <div>Background color: <input type="color" id="bg-color" value="#ffffff" style="margin:10px 0;"></div>
-      <div>Display mode:
+      <div>機率(%): <input type="number" id="new-prob" min="0" max="100" value="10" style="margin:10px 0;"></div>
+      <div>數量: <input type="number" id="new-qty" min="0" value="5" style="margin:10px 0;"></div>
+      <div>顯示文字: <input type="text" id="new-text" placeholder="選填" style="margin:10px 0;"></div>
+      <div>文字顏色: <input type="color" id="text-color" value="#333333" style="margin:10px 0;"></div>
+      <div>背景顏色: <input type="color" id="bg-color" value="#ffffff" style="margin:10px 0;"></div>
+      <div>顯示模式:
         <select id="display-mode">
-          <option value="name">Name</option>
-          <option value="image">Image</option>
-          <option value="all">Both</option>
+          <option value="name">名稱</option>
+          <option value="image">圖片</option>
+          <option value="all">兩者</option>
         </select>
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: "Add",
-    cancelButtonText: "Cancel",
+    confirmButtonText: "新增",
+    cancelButtonText: "取消",
     preConfirm: () => {
       const fileInput = document.getElementById("prize-image");
       const probability = parseFloat(document.getElementById("new-prob").value) || 10;
@@ -856,18 +856,18 @@ function showAddPrizeModal() {
       const mode = document.getElementById("display-mode").value;
 
       if (probability < 0 || quantity < 0) {
-        Swal.fire("Probability and quantity must be non-negative.", "", "warning");
+        Swal.fire("機率和數量不可為負數。", "", "warning");
         return false;
       }
 
       if (!fileInput.files || fileInput.files.length === 0) {
-        Swal.fire("Please select an image file.", "", "warning");
+        Swal.fire("請選擇圖片檔案。", "", "warning");
         return false;
       }
       const file = fileInput.files[0];
       const fName = file.name.toLowerCase();
       if (!fName.endsWith(".png") && !fName.endsWith(".jpg") && !fName.endsWith(".jpeg")) {
-        Swal.fire("Only .png, .jpg, .jpeg are supported.", "", "warning");
+        Swal.fire("僅支援 .png、.jpg、.jpeg 格式。", "", "warning");
         return false;
       }
       const reader = new FileReader();
@@ -894,12 +894,12 @@ function showAddPrizeModal() {
     if (r.isConfirmed) {
       try {
         await saveAllPrizes(prizes);
-        Swal.fire("Prize added.", "", "success").then(() => {
+        Swal.fire("獎品已新增。", "", "success").then(() => {
           refreshPrizeTableInModal();
         });
       } catch (err) {
         console.error("Failed to save prize data:", err);
-        Swal.fire("Error", "Failed to save prize data. Try smaller images or fewer prizes.", "error");
+        Swal.fire("錯誤", "獎品資料儲存失敗，請嘗試較小的圖片或減少獎品數量。", "error");
       }
     }
   });
@@ -916,27 +916,27 @@ function exportPrizesToExcel() {
     DisplayMode: p.displayMode,
   }));
   if (typeof XLSX === "undefined") {
-    Swal.fire("Error", "SheetJS is not loaded.", "error");
+    Swal.fire("錯誤", "SheetJS 未載入。", "error");
     return;
   }
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "PrizeSettings");
+  XLSX.utils.book_append_sheet(wb, ws, "獎品設定");
   XLSX.writeFile(wb, "prizes_settings.xlsx");
-  Swal.fire("Exported.", "Prize settings saved to Excel.", "success");
+  Swal.fire("已匯出。", "獎品設定已儲存為 Excel。", "success");
 }
 
 function importPrizesFromExcelUI() {
   Swal.fire({
-    title: "Import Excel",
+    title: "匯入 Excel",
     html: `<input type="file" id="prizeFile" accept=".xlsx, .xls" />`,
     showCancelButton: true,
-    confirmButtonText: "Import",
-    cancelButtonText: "Cancel",
+    confirmButtonText: "匯入",
+    cancelButtonText: "取消",
     preConfirm: () => {
       const fileInput = document.getElementById("prizeFile");
       if (!fileInput.files || fileInput.files.length === 0) {
-        Swal.showValidationMessage("Please choose a file.");
+        Swal.showValidationMessage("請選擇檔案。");
         return false;
       }
       return fileInput.files[0];
@@ -958,7 +958,7 @@ async function handlePrizesFile(file) {
 
     const header = jsonData[0];
     if (!header || !header.length) {
-      Swal.fire("Import failed.", "The Excel file has no header row.", "error");
+      Swal.fire("匯入失敗。", "Excel 檔案沒有標題列。", "error");
       return;
     }
     const nameIdx = header.indexOf("Name");
@@ -970,7 +970,7 @@ async function handlePrizesFile(file) {
     const modeIdx = header.indexOf("DisplayMode");
 
     if (nameIdx < 0 || probIdx < 0 || qtyIdx < 0) {
-      Swal.fire("Import failed.", "Required columns: Name, Probability, Quantity.", "error");
+      Swal.fire("匯入失敗。", "必須包含欄位：Name、Probability、Quantity。", "error");
       return;
     }
 
@@ -1001,12 +1001,12 @@ async function handlePrizesFile(file) {
     }
     await saveAllPrizes(prizes);
     adjustProbabilities();
-    Swal.fire("Imported.", "Prizes imported from Excel.", "success").then(() => {
+    Swal.fire("已匯入。", "獎品設定已從 Excel 匯入。", "success").then(() => {
       refreshPrizeTableInModal();
     });
   } catch (err) {
     console.error(err);
-    Swal.fire("Import failed.", "Failed to read file.", "error");
+    Swal.fire("匯入失敗。", "無法讀取檔案。", "error");
   }
 }
 
@@ -1027,9 +1027,9 @@ function refreshPrizeTableInModal() {
           <td><input type="color" class="color-input" value="${p.bgColor || "#ffffff"}" data-bg-color-index="${i}"></td>
           <td>
             <select data-mode-index="${i}" class="mode-select">
-              <option value="name" ${p.displayMode === "name" ? "selected" : ""}>Name</option>
-              <option value="image" ${p.displayMode === "image" ? "selected" : ""}>Image</option>
-              <option value="all" ${p.displayMode === "all" ? "selected" : ""}>Both</option>
+              <option value="name" ${p.displayMode === "name" ? "selected" : ""}>名稱</option>
+              <option value="image" ${p.displayMode === "image" ? "selected" : ""}>圖片</option>
+              <option value="all" ${p.displayMode === "all" ? "selected" : ""}>兩者</option>
             </select>
           </td>
           <td>
@@ -1037,7 +1037,7 @@ function refreshPrizeTableInModal() {
               ${p.image ? `<img src="${p.image}" alt="preview" style="width:40px;height:40px;object-fit:cover;">` : "N/A"}
             </div>
             <button type="button" class="action-btn" style="padding:5px;" onclick="updatePrizeImage(${i})">
-              Update image
+              更新圖片
             </button>
           </td>
         </tr>
@@ -1053,8 +1053,8 @@ function refreshPrizeTableInModal() {
   if (warnEl) {
     warnEl.textContent =
       Math.round(tot) === 100
-        ? "Total probability is 100%"
-        : `Warning: total probability is ${tot.toFixed(2)}%. Please normalize to 100%.`;
+        ? "機率總和為 100%"
+        : `警告：機率總和為 ${tot.toFixed(2)}%，請正規化至 100%。`;
   }
 }
 
@@ -1074,7 +1074,7 @@ function updatePrizeImage(index) {
         refreshPrizeTableInModal();
       } catch (err) {
         console.error("Failed to update image data:", err);
-        Swal.fire("Error", "Failed to update image data.", "error");
+        Swal.fire("錯誤", "圖片資料更新失敗。", "error");
       }
     };
     reader.readAsDataURL(file);
@@ -1084,40 +1084,40 @@ function updatePrizeImage(index) {
 
 document.getElementById("settings-btn")?.addEventListener("click", () => {
   let html = `
-    <h3>Prize settings</h3>
+    <h3>獎品設定</h3>
     <table class="prize-table">
       <thead>
         <tr>
-          <th>Select</th>
-          <th>Name</th>
-          <th>Probability (%)</th>
-          <th>Quantity</th>
-          <th>Display text</th>
-          <th>Text color</th>
-          <th>Background color</th>
-          <th>Display mode</th>
-          <th>Image</th>
+          <th>選取</th>
+          <th>名稱</th>
+          <th>機率 (%)</th>
+          <th>數量</th>
+          <th>顯示文字</th>
+          <th>文字顏色</th>
+          <th>背景顏色</th>
+          <th>顯示模式</th>
+          <th>圖片</th>
         </tr>
       </thead>
       <tbody id="prize-table-tbody">
       </tbody>
     </table>
-    <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">Delete selected</button>
-    <button type="button" onclick="showAddPrizeModal()" class="action-btn">Add prize</button>
-    <button type="button" onclick="distributeProbabilities()" class="action-btn">Normalize probabilities</button>
-    <button type="button" onclick="importPrizesFromExcelUI()" class="action-btn">Import prizes</button>
-    <button type="button" onclick="exportPrizesToExcel()" class="action-btn">Export prizes</button>
+    <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">刪除選取</button>
+    <button type="button" onclick="showAddPrizeModal()" class="action-btn">新增獎品</button>
+    <button type="button" onclick="distributeProbabilities()" class="action-btn">正規化機率</button>
+    <button type="button" onclick="importPrizesFromExcelUI()" class="action-btn">匯入獎品</button>
+    <button type="button" onclick="exportPrizesToExcel()" class="action-btn">匯出獎品</button>
 
-    <div>Thumbnail size (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
-    <div>Enlarged size (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
+    <div>縮圖大小 (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
+    <div>放大圖大小 (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
     <p id="probability-warning"></p>
   `;
 
   Swal.fire({
     html,
     showCancelButton: true,
-    confirmButtonText: "Save",
-    cancelButtonText: "Cancel",
+    confirmButtonText: "儲存",
+    cancelButtonText: "取消",
     focusConfirm: false,
     width: "1600px",
     preConfirm: async () => {
@@ -1155,7 +1155,7 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
 
       const hasNegative = prizes.some((p) => p.probability < 0 || p.quantity < 0);
       if (hasNegative) {
-        Swal.fire("Probability and quantity must be non-negative.", "", "warning");
+        Swal.fire("機率和數量不可為負數。", "", "warning");
         return false;
       }
 
@@ -1164,8 +1164,8 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
         .reduce((sum, p) => sum + p.probability, 0);
       if (Math.abs(totalProb - 100) > 0.01) {
         Swal.fire(
-          "Probability total must be 100%.",
-          "Use Normalize Probabilities or adjust values manually.",
+          "機率總和必須為 100%。",
+          "請使用「正規化機率」或手動調整數值。",
           "warning"
         );
         return false;
@@ -1181,13 +1181,13 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
         await saveAllPrizes(prizes);
       } catch (err) {
         console.error("Failed to save prize data:", err);
-        Swal.fire("Error", "Failed to save prize data. Try smaller images or fewer prizes.", "error");
+        Swal.fire("錯誤", "獎品資料儲存失敗，請嘗試較小的圖片或減少獎品數量。", "error");
         return false;
       }
     },
   }).then((r) => {
     if (r.isConfirmed) {
-      Swal.fire("Settings saved.", "", "success");
+      Swal.fire("設定已儲存。", "", "success");
     }
   });
 
@@ -1200,7 +1200,7 @@ async function deleteSelectedPrizes() {
   const checks = document.querySelectorAll(".swal2-modal .delete-check:checked");
   const toDelete = Array.from(checks).map((cb) => parseInt(cb.getAttribute("data-index")));
   if (!toDelete.length) {
-    Swal.showValidationMessage("Select at least one prize.");
+    Swal.showValidationMessage("請至少選取一個獎品。");
     return;
   }
   prizes = prizes.filter((_, i) => !toDelete.includes(i));
@@ -1210,7 +1210,7 @@ async function deleteSelectedPrizes() {
     refreshPrizeTableInModal();
   } catch (err) {
     console.error("Failed to delete prizes:", err);
-    Swal.fire("Error", "Failed to save prize data.", "error");
+    Swal.fire("錯誤", "獎品資料儲存失敗。", "error");
   }
 }
 
@@ -1275,9 +1275,9 @@ function buildDistributionTable(dist, totalDraws) {
     <table class="history-table" style="margin:0 auto;">
       <thead>
         <tr>
-          <th>Prize</th>
-          <th>Hits</th>
-          <th>Rate (%)</th>
+          <th>獎品</th>
+          <th>次數</th>
+          <th>比率 (%)</th>
         </tr>
       </thead>
       <tbody>
@@ -1304,18 +1304,18 @@ function testDrawLottery() {
   const table1000 = buildDistributionTable(dist1000, 1000);
 
   const html = `
-    <h3>Simulation: 100 draws</h3>
+    <h3>模擬抽獎：100 次</h3>
     ${table100}
     <hr/>
-    <h3>Simulation: 1000 draws</h3>
+    <h3>模擬抽獎：1000 次</h3>
     ${table1000}
   `;
 
   Swal.fire({
-    title: "Simulation results",
+    title: "模擬結果",
     html,
     width: "800px",
     showConfirmButton: true,
-    confirmButtonText: "OK",
+    confirmButtonText: "確定",
   });
 }
