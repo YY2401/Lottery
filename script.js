@@ -1032,26 +1032,28 @@ function refreshPrizeTableInModal() {
       return `
         <tr>
           <td><input type="checkbox" class="delete-check" data-index="${i}"></td>
-          <td>${p.name}</td>
-          <td><input type="number" class="prob-input" min="0" max="100" value="${p.probability}" data-index="${i}"></td>
-          <td><input type="number" class="qty-input" min="0" value="${p.quantity}" data-qty-index="${i}"></td>
-          <td><input type="text" class="text-input" value="${p.customText || p.name}" data-text-index="${i}"></td>
-          <td><input type="color" class="color-input" value="${p.textColor || "#333333"}" data-text-color-index="${i}"></td>
-          <td><input type="color" class="color-input" value="${p.bgColor || "#ffffff"}" data-bg-color-index="${i}"></td>
+          <td class="td-name">${p.name}</td>
+          <td><input type="number" class="tbl-input prob-input" min="0" max="100" value="${p.probability}" data-index="${i}"></td>
+          <td><input type="number" class="tbl-input qty-input" min="0" value="${p.quantity}" data-qty-index="${i}"></td>
+          <td><input type="text" class="tbl-input text-input" value="${p.customText || p.name}" data-text-index="${i}"></td>
           <td>
-            <select data-mode-index="${i}" class="mode-select">
+            <div class="color-pair">
+              <label title="文字"><input type="color" class="color-swatch" value="${p.textColor || "#333333"}" data-text-color-index="${i}">T</label>
+              <label title="背景"><input type="color" class="color-swatch" value="${p.bgColor || "#ffffff"}" data-bg-color-index="${i}">B</label>
+            </div>
+          </td>
+          <td>
+            <select data-mode-index="${i}" class="tbl-select mode-select">
               <option value="name" ${p.displayMode === "name" ? "selected" : ""}>名稱</option>
               <option value="image" ${p.displayMode === "image" ? "selected" : ""}>圖片</option>
               <option value="all" ${p.displayMode === "all" ? "selected" : ""}>兩者</option>
             </select>
           </td>
           <td>
-            <div style="margin-bottom:5px;">
-              ${p.image ? `<img src="${p.image}" alt="preview" style="width:40px;height:40px;object-fit:cover;">` : "N/A"}
+            <div class="img-cell">
+              ${p.image ? `<img src="${p.image}" alt="preview" class="img-preview">` : `<span class="img-na">—</span>`}
+              <button type="button" class="img-btn" onclick="updatePrizeImage(${i})">更換</button>
             </div>
-            <button type="button" class="action-btn" style="padding:5px;" onclick="updatePrizeImage(${i})">
-              更新圖片
-            </button>
           </td>
         </tr>
       `;
@@ -1066,8 +1068,8 @@ function refreshPrizeTableInModal() {
   if (warnEl) {
     warnEl.textContent =
       Math.round(tot) === 100
-        ? "機率總和為 100%"
-        : `警告：機率總和為 ${tot.toFixed(2)}%，請正規化至 100%。`;
+        ? "✓ 機率總和為 100%"
+        : `⚠ 機率總和為 ${tot.toFixed(2)}%，請正規化至 100%`;
   }
 }
 
@@ -1097,33 +1099,46 @@ function updatePrizeImage(index) {
 
 document.getElementById("settings-btn")?.addEventListener("click", () => {
   let html = `
-    <h3>獎品設定</h3>
-    <table class="prize-table">
-      <thead>
-        <tr>
-          <th>選取</th>
-          <th>名稱</th>
-          <th>機率 (%)</th>
-          <th>數量</th>
-          <th>顯示文字</th>
-          <th>文字顏色</th>
-          <th>背景顏色</th>
-          <th>顯示模式</th>
-          <th>圖片</th>
-        </tr>
-      </thead>
-      <tbody id="prize-table-tbody">
-      </tbody>
-    </table>
-    <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">刪除選取</button>
-    <button type="button" onclick="showAddPrizeModal()" class="action-btn">新增獎品</button>
-    <button type="button" onclick="distributeProbabilities()" class="action-btn">正規化機率</button>
-    <button type="button" onclick="importPrizesFromExcelUI()" class="action-btn">匯入獎品</button>
-    <button type="button" onclick="exportPrizesToExcel()" class="action-btn">匯出獎品</button>
+    <div class="settings-modal">
+      <div class="settings-section">
+        <div class="settings-section-title">獎品列表</div>
+        <div class="prize-table-wrap">
+          <table class="prize-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>名稱</th>
+                <th>機率 (%)</th>
+                <th>數量</th>
+                <th>顯示文字</th>
+                <th>顏色</th>
+                <th>模式</th>
+                <th>圖片</th>
+              </tr>
+            </thead>
+            <tbody id="prize-table-tbody"></tbody>
+          </table>
+        </div>
+        <p id="probability-warning" class="prob-warning"></p>
+      </div>
 
-    <div>縮圖大小 (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
-    <div>放大圖大小 (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
-    <p id="probability-warning"></p>
+      <div class="settings-toolbar">
+        <button type="button" onclick="showAddPrizeModal()" class="stb stb-primary">＋ 新增獎品</button>
+        <button type="button" onclick="deleteSelectedPrizes()" class="stb stb-danger">刪除選取</button>
+        <button type="button" onclick="distributeProbabilities()" class="stb stb-default">正規化機率</button>
+        <div class="stb-divider"></div>
+        <button type="button" onclick="importPrizesFromExcelUI()" class="stb stb-default">匯入</button>
+        <button type="button" onclick="exportPrizesToExcel()" class="stb stb-default">匯出</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">顯示設定</div>
+        <div class="settings-row">
+          <label class="settings-label">縮圖大小 <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size" class="settings-input-sm"> px</label>
+          <label class="settings-label">放大圖大小 <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size" class="settings-input-sm"> px</label>
+        </div>
+      </div>
+    </div>
   `;
 
   Swal.fire({
@@ -1132,7 +1147,7 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
     confirmButtonText: "儲存",
     cancelButtonText: "取消",
     focusConfirm: false,
-    width: "1600px",
+    width: "960px",
     preConfirm: async () => {
       const probInputs = document.querySelectorAll(".swal2-modal .prob-input");
       const qtyInputs = document.querySelectorAll(".swal2-modal .qty-input");
