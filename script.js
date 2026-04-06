@@ -90,6 +90,16 @@ initTheme();
 document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
 
 /***********************************************
+ * History Panel Toggle
+ ***********************************************/
+function toggleHistoryPanel() {
+  const content = document.getElementById("history-content");
+  const arrow = document.getElementById("history-arrow");
+  if (content) content.classList.toggle("open");
+  if (arrow) arrow.classList.toggle("open");
+}
+
+/***********************************************
  * Init
  ***********************************************/
 window.onload = async () => {

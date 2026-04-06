@@ -10,52 +10,68 @@
     <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
   </head>
   <body>
-    <button id="theme-toggle" class="theme-toggle" title="切換深色/淺色模式"></button>
-    <h1>Lottery</h1>
-
-    <div class="input-section">
-      <div id="animation-container" class="animation-container"></div>
-      <label for="player-name">抽獎者名稱：</label>
-      <input type="text" id="player-name" placeholder="請輸入名稱" />
-    </div>
-
-    <div class="buttons">
-      <button id="btn-single" onclick="drawSingle()">抽獎</button>
-      <button id="btn-multi5" onclick="drawMultiple(5)">五連抽</button>
-      <button id="btn-multi10" onclick="drawMultiple(10)">十連抽</button>
-    </div>
-
-    <div id="result" class="result"></div>
-
-    <h2>歷史紀錄</h2>
-    <div class="history-section">
-      <div class="history-filters">
-        <input
-          type="text"
-          id="history-search"
-          class="history-search"
-          placeholder="搜尋抽獎者或獎項"
-        />
-        <label>從：<input type="date" id="history-date-from" /></label>
-        <label>到：<input type="date" id="history-date-to" /></label>
-        <button onclick="applyHistoryFilters()" class="filter-btn">篩選</button>
-        <button onclick="resetHistoryFilters()" class="filter-btn filter-btn-reset">重置</button>
+    <!-- 頂部工具列 -->
+    <div class="toolbar">
+      <button id="theme-toggle" class="toolbar-btn" title="切換深色/淺色模式"></button>
+      <div class="toolbar-right">
+        <button id="test-draw-btn" class="toolbar-btn toolbar-btn-teal">測試抽獎</button>
+        <button id="settings-btn" class="toolbar-btn toolbar-btn-green">設置</button>
       </div>
-      <div id="history-stats" class="history-stats"></div>
-      <span id="record-count" class="record-count"></span>
-      <span id="storage-size" class="storage-size">localStorage 使用空間: 0 KB</span>
-      <div id="history" class="history"></div>
-      <div id="history-pagination" class="history-pagination"></div>
     </div>
 
-    <button onclick="clearHistory()" class="clear-btn">清空紀錄</button>
-    <button id="copy-btn" class="clear-btn">複製到剪貼簿</button>
-    <button id="export-btn" class="clear-btn">匯出 Excel</button>
+    <!-- 主抽獎區 -->
+    <main class="draw-area">
+      <h1 class="title">Lottery</h1>
 
-    <button id="settings-btn" class="settings-btn">設置</button>
-    <button id="test-draw-btn" class="settings-btn" style="right: 120px">
-      測試抽獎
-    </button>
+      <div id="animation-container" class="animation-container"></div>
+
+      <div class="input-group">
+        <label for="player-name">抽獎者名稱</label>
+        <input type="text" id="player-name" placeholder="請輸入名稱" />
+      </div>
+
+      <div class="buttons">
+        <button id="btn-single" onclick="drawSingle()">抽獎</button>
+        <button id="btn-multi5" onclick="drawMultiple(5)">五連抽</button>
+        <button id="btn-multi10" onclick="drawMultiple(10)">十連抽</button>
+      </div>
+
+      <div id="result" class="result"></div>
+    </main>
+
+    <!-- 歷史紀錄區（可收折） -->
+    <section class="history-panel">
+      <button class="history-toggle" onclick="toggleHistoryPanel()">
+        <span>歷史紀錄</span>
+        <svg id="history-arrow" class="history-arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+
+      <div id="history-content" class="history-content">
+        <div class="history-filters">
+          <input type="text" id="history-search" class="history-search" placeholder="搜尋抽獎者或獎項" />
+          <label>從：<input type="date" id="history-date-from" /></label>
+          <label>到：<input type="date" id="history-date-to" /></label>
+          <button onclick="applyHistoryFilters()" class="filter-btn">篩選</button>
+          <button onclick="resetHistoryFilters()" class="filter-btn filter-btn-reset">重置</button>
+        </div>
+
+        <div id="history-stats" class="history-stats"></div>
+
+        <div class="history-meta">
+          <span id="record-count" class="record-count"></span>
+          <span id="storage-size" class="storage-size"></span>
+        </div>
+
+        <div id="history" class="history"></div>
+        <div id="history-pagination" class="history-pagination"></div>
+
+        <div class="history-actions">
+          <button onclick="clearHistory()" class="action-btn-sm action-btn-red">清空紀錄</button>
+          <button id="copy-btn" class="action-btn-sm action-btn-green">複製到剪貼簿</button>
+          <button id="export-btn" class="action-btn-sm action-btn-blue">匯出 Excel</button>
+        </div>
+      </div>
+    </section>
 
     <div id="particle-container" class="particle-container"></div>
 
