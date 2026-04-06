@@ -507,7 +507,24 @@ function saveToHistory(result) {
     });
   });
 
-  if (history.length > 2000) history = history.slice(0, 2000);
+  if (history.length > 20000) {
+    Swal.fire({
+      title: "紀錄已達上限",
+      text: "歷史紀錄已超過 20,000 筆，建議先匯出 Excel 備份後再清空紀錄。",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "匯出並清空",
+      cancelButtonText: "僅保留最新紀錄",
+    }).then((r) => {
+      if (r.isConfirmed) {
+        exportHistoryToExcel();
+        localStorage.removeItem("lotteryHistory");
+        applyHistoryFilters();
+        updateStorageSize();
+      }
+    });
+    history = history.slice(0, 20000);
+  }
 
   try {
     localStorage.setItem("lotteryHistory", JSON.stringify(history));
