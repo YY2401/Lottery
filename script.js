@@ -247,8 +247,8 @@ function animateResultItems() {
     targets: "#result .result-item",
     opacity: [0, 1],
     scale: [0, 1],
-    delay: anime.stagger(120),
-    duration: 400,
+    delay: anime.stagger(500),
+    duration: 500,
     easing: "easeOutBack",
   });
 }

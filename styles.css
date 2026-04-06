@@ -298,21 +298,28 @@ button:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
   padding: 8px;
   border-radius: 8px;
   opacity: 0;
   transform: scale(0);
+  text-align: center;
+  min-width: 90px;
 }
 .result-item img {
   max-width: var(--thumbnail-size, 80px);
   max-height: var(--thumbnail-size, 80px);
   object-fit: contain;
+  display: block;
+  margin: 0 auto;
 }
 .result-item .result-text {
   margin-top: 5px;
   font-size: 16px;
   color: var(--text-result);
+  text-align: center;
+  width: 100%;
 }
 
 /* ============================
