@@ -687,11 +687,9 @@ mark {
   position: sticky;
   top: 0;
   z-index: 1;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 10px 8px;
+  padding: 12px 10px;
   white-space: nowrap;
 }
 .prize-table td {
