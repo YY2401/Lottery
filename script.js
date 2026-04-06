@@ -3,7 +3,7 @@ function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("lotteryDB", 1);
     request.onerror = (e) => {
-      console.error("無法開啟 IndexedDB:", e.target.error);
+      console.error("IndexedDB error:", e.target.error);
       reject(e.target.error);
     };
     request.onsuccess = (e) => {
@@ -22,120 +22,266 @@ function initDB() {
   });
 }
 
-/**
- * 從 IndexedDB 讀取所有獎項 (prizes)
- */
 function getAllPrizes() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["prizes"], "readonly");
     const store = tx.objectStore("prizes");
-    const request = store.getAll(); // 取得整個資料表
-    request.onsuccess = (e) => {
-      resolve(e.target.result);
-    };
-    request.onerror = (e) => {
-      reject(e.target.error);
-    };
+    const request = store.getAll();
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
   });
 }
 
-/**
- * 將 prizes 寫入 IndexedDB並先清除 store
- */
 function saveAllPrizes(prizesArray) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["prizes"], "readwrite");
     const store = tx.objectStore("prizes");
-
     const clearReq = store.clear();
     clearReq.onsuccess = () => {
       let remaining = prizesArray.length;
-      if (remaining === 0) {
-        return resolve();
-      }
+      if (remaining === 0) return resolve();
       prizesArray.forEach((prize) => {
         const addReq = store.add(prize);
         addReq.onsuccess = () => {
           remaining--;
-          if (remaining === 0) {
-            resolve();
-          }
+          if (remaining === 0) resolve();
         };
-        addReq.onerror = (err) => {
-          reject(err.target.error);
-        };
+        addReq.onerror = (err) => reject(err.target.error);
       });
     };
-    clearReq.onerror = (e) => {
-      reject(e.target.error);
-    };
+    clearReq.onerror = (e) => reject(e.target.error);
   });
 }
+
 let prizes = [];
 let thumbnailSize = 80;
 let enlargedSize = 300;
+let isDrawing = false;
+let historyPage = 1;
+const HISTORY_PAGE_SIZE = 50;
 
 /***********************************************
- * 頁面載入
+ * Init
  ***********************************************/
 window.onload = async () => {
   try {
     await initDB();
   } catch (err) {
-    console.error("IndexedDB 初始化失敗:", err);
-    Swal.fire("錯誤", "IndexedDB 無法使用，部分功能可能無法運作。", "error");
+    console.error("IndexedDB init failed:", err);
+    Swal.fire("Error", "IndexedDB is unavailable. Some features may not work.", "error");
   }
 
   try {
     const data = await getAllPrizes();
     prizes = data || [];
   } catch (err) {
-    console.error("讀取 IndexedDB 失敗:", err);
+    console.error("Failed to read IndexedDB:", err);
     prizes = [];
   }
 
   thumbnailSize = parseInt(localStorage.getItem("thumbnailSize")) || 80;
   enlargedSize = parseInt(localStorage.getItem("enlargedSize")) || 300;
-  document.documentElement.style.setProperty(
-    "--thumbnail-size",
-    `${thumbnailSize}px`
-  );
+  document.documentElement.style.setProperty("--thumbnail-size", `${thumbnailSize}px`);
 
-  // 初始化機率邏輯：動態分配
   adjustProbabilities();
-  updateHistoryDisplay();
+  applyHistoryFilters();
   updateStorageSize();
 
   document.getElementById("test-draw-btn")?.addEventListener("click", () => {
     testDrawLottery();
   });
+
+  // Button press animation
+  document.querySelectorAll(".buttons button").forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => {
+      if (typeof anime !== "undefined") {
+        anime({
+          targets: e.currentTarget,
+          scale: [1, 0.92, 1],
+          duration: 300,
+          easing: "easeInOutQuad",
+        });
+      }
+    });
+  });
 };
 
 /***********************************************
- * 抽獎邏輯 (單抽、多抽)
+ * Animation: Slot machine reel
  ***********************************************/
+function playSlotAnimation(pickedItem, activeItems) {
+  return new Promise((resolve) => {
+    if (typeof anime === "undefined" || activeItems.length < 2) {
+      resolve();
+      return;
+    }
 
+    const container = document.getElementById("animation-container");
+    if (!container) { resolve(); return; }
+
+    container.classList.add("active");
+    container.innerHTML = "";
+
+    // Build reel: repeat prizes several times, end with picked item
+    const reelNames = [];
+    for (let i = 0; i < 4; i++) {
+      activeItems.forEach((p) => reelNames.push(p.customText || p.name));
+    }
+    reelNames.push(pickedItem.customText || pickedItem.name);
+
+    const reel = document.createElement("div");
+    reel.className = "slot-reel";
+    reelNames.forEach((name) => {
+      const item = document.createElement("div");
+      item.className = "slot-item";
+      item.textContent = name;
+      reel.appendChild(item);
+    });
+    container.appendChild(reel);
+
+    const itemHeight = 80;
+    const finalOffset = -(reelNames.length - 1) * itemHeight;
+
+    anime({
+      targets: reel,
+      translateY: [0, finalOffset],
+      duration: 2000,
+      easing: "easeOutExpo",
+      complete: () => {
+        setTimeout(() => {
+          container.classList.remove("active");
+          container.innerHTML = "";
+          resolve();
+        }, 300);
+      },
+    });
+  });
+}
+
+/***********************************************
+ * Animation: Celebration particles
+ ***********************************************/
+function playCelebration() {
+  if (typeof anime === "undefined") return;
+
+  const container = document.getElementById("particle-container");
+  if (!container) return;
+
+  const colors = ["#ff6b6b", "#feca57", "#48dbfb", "#ff9ff3", "#54a0ff", "#5f27cd", "#01a3a4", "#f368e0"];
+  const particles = [];
+
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement("div");
+    p.className = "particle";
+    const size = Math.random() * 10 + 6;
+    p.style.width = size + "px";
+    p.style.height = size + "px";
+    p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    p.style.left = "50%";
+    p.style.top = "40%";
+    container.appendChild(p);
+    particles.push(p);
+  }
+
+  anime({
+    targets: particles,
+    translateX: () => anime.random(-350, 350),
+    translateY: () => anime.random(-400, 200),
+    scale: [{ value: 1, duration: 0 }, { value: 0, duration: 800, delay: 400 }],
+    opacity: [{ value: 1, duration: 0 }, { value: 0, duration: 600, delay: 600 }],
+    rotate: () => anime.random(-180, 180),
+    duration: 1200,
+    easing: "easeOutExpo",
+    delay: anime.stagger(15),
+    complete: () => {
+      particles.forEach((p) => p.remove());
+    },
+  });
+}
+
+/***********************************************
+ * Animation: Stagger reveal for result items
+ ***********************************************/
+function animateResultItems() {
+  if (typeof anime === "undefined") return;
+  anime({
+    targets: "#result .result-item",
+    opacity: [0, 1],
+    scale: [0, 1],
+    delay: anime.stagger(120),
+    duration: 400,
+    easing: "easeOutBack",
+  });
+}
+
+/***********************************************
+ * Draw buttons lock
+ ***********************************************/
+function setDrawButtonsEnabled(enabled) {
+  const btns = document.querySelectorAll(".buttons button");
+  btns.forEach((b) => (b.disabled = !enabled));
+  isDrawing = !enabled;
+}
+
+/***********************************************
+ * Build result item DOM element
+ ***********************************************/
+function createResultItemElement(pickedItem) {
+  const div = document.createElement("div");
+  div.className = "result-item";
+  div.style.color = pickedItem.textColor || "#333";
+  div.style.backgroundColor = pickedItem.bgColor || "#fff";
+
+  const hasImage = pickedItem.image && pickedItem.image.trim() !== "";
+  const label = pickedItem.customText || pickedItem.name;
+
+  if (pickedItem.displayMode === "image") {
+    div.innerHTML = hasImage
+      ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
+      : `<div class="result-text">No image</div>`;
+  } else if (pickedItem.displayMode === "all") {
+    const imgPart = hasImage
+      ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
+      : `<div class="result-text">No image</div>`;
+    div.innerHTML = imgPart + `<div class="result-text">${label}</div>`;
+  } else {
+    div.innerHTML = `<div class="result-text">${label}</div>`;
+  }
+
+  if (hasImage) {
+    div.addEventListener("click", () => showEnlargedImage(pickedItem.image, label));
+    div.style.cursor = "pointer";
+  }
+
+  return div;
+}
+
+/***********************************************
+ * Draw: Single
+ ***********************************************/
 async function drawSingle() {
-  // 先清空舊結果
+  if (isDrawing) return;
   clearResults();
 
   const playerName = document.getElementById("player-name")?.value.trim();
   if (!playerName) {
-    Swal.fire("請輸入抽獎者名稱！", "", "warning");
+    Swal.fire("Please enter a player name.", "", "warning");
     return;
   }
 
   const activeItems = prizes.filter((p) => p.quantity > 0);
   if (!activeItems.length) {
-    Swal.fire("獎池為空或已抽完！", "請在設置中添加獎項", "warning");
+    Swal.fire("No prizes left.", "Please add prizes in Settings.", "warning");
     return;
   }
 
   const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
   if (totalProb <= 0) {
-    Swal.fire("獎池中所有獎項機率為 0，無法抽獎！", "", "warning");
+    Swal.fire("All active prizes have 0 probability.", "", "warning");
     return;
   }
+
+  setDrawButtonsEnabled(false);
 
   const rand = Math.random() * totalProb;
   let cumulative = 0;
@@ -151,106 +297,62 @@ async function drawSingle() {
   }
 
   if (pickedItem) {
+    // Slot animation
+    await playSlotAnimation(pickedItem, activeItems);
+
     const resultDiv = document.getElementById("result");
     if (resultDiv) {
-      const div = document.createElement("div");
-      div.className = "result-item";
-      div.style.color = pickedItem.textColor || "#333";
-      div.style.backgroundColor = pickedItem.bgColor || "#fff";
-
-      if (pickedItem.displayMode === "image") {
-        if (pickedItem.image && pickedItem.image.trim() !== "") {
-          div.innerHTML = `<img src="${pickedItem.image}" alt="${pickedItem.name}">`;
-          div.addEventListener("click", () => {
-            showEnlargedImage(
-              pickedItem.image,
-              pickedItem.customText || pickedItem.name
-            );
-          });
-          div.style.cursor = "pointer";
-        } else {
-          div.innerHTML = `<div class="result-text">無圖片</div>`;
-        }
-      } else if (pickedItem.displayMode === "all") {
-        const imgPart =
-          pickedItem.image && pickedItem.image.trim() !== ""
-            ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
-            : `<div class="result-text">無圖片</div>`;
-        const textPart = `<div class="result-text">${
-          pickedItem.customText || pickedItem.name
-        }</div>`;
-        div.innerHTML = imgPart + textPart;
-
-        if (pickedItem.image && pickedItem.image.trim() !== "") {
-          div.addEventListener("click", () => {
-            showEnlargedImage(
-              pickedItem.image,
-              pickedItem.customText || pickedItem.name
-            );
-          });
-          div.style.cursor = "pointer";
-        }
-      } else {
-        div.innerHTML = `<div class="result-text">${
-          pickedItem.customText || pickedItem.name
-        }</div>`;
-        if (pickedItem.image && pickedItem.image.trim() !== "") {
-          div.addEventListener("click", () => {
-            showEnlargedImage(
-              pickedItem.image,
-              pickedItem.customText || pickedItem.name
-            );
-          });
-          div.style.cursor = "pointer";
-        }
-      }
-      resultDiv.appendChild(div);
+      resultDiv.appendChild(createResultItemElement(pickedItem));
+      animateResultItems();
     }
 
-    // 寫入歷史紀錄
+    playCelebration();
     saveToHistory([pickedItem]);
   }
 
-  // 每抽完就再做一次動態分攤
   adjustProbabilities();
-  updateHistoryDisplay();
+  applyHistoryFilters();
   updateStorageSize();
 
-  // 同步更新 IndexedDB
   try {
     await saveAllPrizes(prizes);
   } catch (e) {
-    console.error("更新 IndexedDB 失敗:", e);
-    Swal.fire("錯誤", "儲存獎項資料時發生錯誤。", "error");
+    console.error("Failed to save IndexedDB:", e);
+    Swal.fire("Error", "Failed to save prize data.", "error");
   }
+
+  setDrawButtonsEnabled(true);
 }
 
-/**
- * 多抽前，先清空顯示區
- * 然後重複呼叫 drawSingle() 指定次數
- */
+/***********************************************
+ * Draw: Multiple
+ ***********************************************/
 async function drawMultiple(count) {
-  // 先清空結果
+  if (isDrawing) return;
   clearResults();
 
   const playerName = document.getElementById("player-name")?.value.trim();
   if (!playerName) {
-    Swal.fire("請輸入抽獎者名稱！", "", "warning");
+    Swal.fire("Please enter a player name.", "", "warning");
     return;
   }
+
+  setDrawButtonsEnabled(false);
+
+  const allPicked = [];
 
   for (let i = 0; i < count; i++) {
     const activeItems = prizes.filter((p) => p.quantity > 0);
     if (!activeItems.length) {
-      Swal.fire("獎池為空或已抽完！", "請在設置中添加獎項", "warning");
+      Swal.fire("No prizes left.", "Please add prizes in Settings.", "warning");
       break;
     }
     const totalProb = activeItems.reduce((sum, p) => sum + p.probability, 0);
     if (totalProb <= 0) {
-      Swal.fire("獎池中所有獎項機率為 0，無法抽獎！", "", "warning");
+      Swal.fire("All active prizes have 0 probability.", "", "warning");
       break;
     }
-    // 單抽
+
     const rand = Math.random() * totalProb;
     let cumulative = 0;
     let pickedItem = null;
@@ -265,92 +367,41 @@ async function drawMultiple(count) {
     }
 
     if (pickedItem) {
-      // 顯示 (不清空，每次疊加)
-      const resultDiv = document.getElementById("result");
-      if (resultDiv) {
-        const div = document.createElement("div");
-        div.className = "result-item";
-        div.style.color = pickedItem.textColor || "#333";
-        div.style.backgroundColor = pickedItem.bgColor || "#fff";
-
-        if (pickedItem.displayMode === "image") {
-          if (pickedItem.image && pickedItem.image.trim() !== "") {
-            div.innerHTML = `<img src="${pickedItem.image}" alt="${pickedItem.name}">`;
-            div.addEventListener("click", () => {
-              showEnlargedImage(
-                pickedItem.image,
-                pickedItem.customText || pickedItem.name
-              );
-            });
-            div.style.cursor = "pointer";
-          } else {
-            div.innerHTML = `<div class="result-text">無圖片</div>`;
-          }
-        } else if (pickedItem.displayMode === "all") {
-          const imgPart =
-            pickedItem.image && pickedItem.image.trim() !== ""
-              ? `<img src="${pickedItem.image}" alt="${pickedItem.name}">`
-              : `<div class="result-text">無圖片</div>`;
-          const textPart = `<div class="result-text">${
-            pickedItem.customText || pickedItem.name
-          }</div>`;
-          div.innerHTML = imgPart + textPart;
-
-          if (pickedItem.image && pickedItem.image.trim() !== "") {
-            div.addEventListener("click", () => {
-              showEnlargedImage(
-                pickedItem.image,
-                pickedItem.customText || pickedItem.name
-              );
-            });
-            div.style.cursor = "pointer";
-          }
-        } else {
-          div.innerHTML = `<div class="result-text">${
-            pickedItem.customText || pickedItem.name
-          }</div>`;
-          if (pickedItem.image && pickedItem.image.trim() !== "") {
-            div.addEventListener("click", () => {
-              showEnlargedImage(
-                pickedItem.image,
-                pickedItem.customText || pickedItem.name
-              );
-            });
-            div.style.cursor = "pointer";
-          }
-        }
-        resultDiv.appendChild(div);
-      }
-
+      allPicked.push(pickedItem);
       saveToHistory([pickedItem]);
     }
 
-    // 每抽完 1 次調整機率
     adjustProbabilities();
-    updateStorageSize();
 
     try {
       await saveAllPrizes(prizes);
     } catch (e) {
-      console.error("更新 IndexedDB 失敗:", e);
-      Swal.fire("錯誤", "儲存獎項資料時發生錯誤。", "error");
+      console.error("Failed to save IndexedDB:", e);
+      Swal.fire("Error", "Failed to save prize data.", "error");
       break;
     }
   }
 
-  updateHistoryDisplay();
+  // Show all results at once with stagger animation
+  const resultDiv = document.getElementById("result");
+  if (resultDiv && allPicked.length) {
+    allPicked.forEach((item) => {
+      resultDiv.appendChild(createResultItemElement(item));
+    });
+    animateResultItems();
+    playCelebration();
+  }
+
+  applyHistoryFilters();
+  updateStorageSize();
+  setDrawButtonsEnabled(true);
 }
 
-/**
- * 清空
- */
 function clearResults() {
   const resultDiv = document.getElementById("result");
-  if (resultDiv) {
-    resultDiv.innerHTML = "";
-  }
+  if (resultDiv) resultDiv.innerHTML = "";
 }
-/** 放大圖片 */
+
 function showEnlargedImage(imgSrc, name) {
   Swal.fire({
     title: name,
@@ -364,13 +415,15 @@ function showEnlargedImage(imgSrc, name) {
   });
 }
 
-/** 寫入歷史紀錄 */
+/***********************************************
+ * History: Save
+ ***********************************************/
 function saveToHistory(result) {
   if (!result || !result.length) return;
   let history = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
   const now = new Date().toLocaleString();
+  const ts = Date.now();
 
-  history.unshift({ isSeparator: true });
   result.forEach((item) => {
     history.unshift({
       name: item.name,
@@ -380,139 +433,271 @@ function saveToHistory(result) {
       textColor: item.textColor,
       bgColor: item.bgColor,
       time: now,
+      timestamp: ts,
     });
   });
-  history.unshift({ isSeparator: true });
-  if (history.length > 1000) history = history.slice(0, 1000);
+
+  if (history.length > 2000) history = history.slice(0, 2000);
 
   try {
     localStorage.setItem("lotteryHistory", JSON.stringify(history));
   } catch (e) {
     if (e.name === "QuotaExceededError") {
-      Swal.fire("儲存空間已滿！", "", "error");
+      Swal.fire("Storage full.", "History has been cleared.", "error");
       localStorage.removeItem("lotteryHistory");
     }
   }
 }
 
-/** 顯示歷史紀錄 */
-function updateHistoryDisplay(query) {
-  if (!query) query = "";
+/***********************************************
+ * History: Display with filters, pagination, stats
+ ***********************************************/
+function updateHistoryDisplay(options) {
+  options = options || {};
+  const query = (options.query || "").trim().toLowerCase();
+  const dateFrom = options.dateFrom || "";
+  const dateTo = options.dateTo || "";
+  const page = options.page || historyPage;
+
   const historyDiv = document.getElementById("history");
   if (!historyDiv) return;
 
-  const allHistory = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
+  const allHistory = (JSON.parse(localStorage.getItem("lotteryHistory")) || [])
+    .filter((item) => !item.isSeparator);
+
   let filtered = allHistory;
-  if (query.trim()) {
-    const q = query.trim().toLowerCase();
-    filtered = allHistory.filter((item) => {
-      if (item.isSeparator) return false;
-      return (
-        item.player.toLowerCase().includes(q) ||
-        (item.customText || item.name).toLowerCase().includes(q)
-      );
+
+  // Text filter
+  if (query) {
+    filtered = filtered.filter((item) =>
+      (item.player || "").toLowerCase().includes(query) ||
+      (item.customText || item.name || "").toLowerCase().includes(query)
+    );
+  }
+
+  // Date range filter
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+    from.setHours(0, 0, 0, 0);
+    filtered = filtered.filter((item) => {
+      const itemDate = item.timestamp ? new Date(item.timestamp) : parseLocalDate(item.time);
+      return itemDate >= from;
+    });
+  }
+  if (dateTo) {
+    const to = new Date(dateTo);
+    to.setHours(23, 59, 59, 999);
+    filtered = filtered.filter((item) => {
+      const itemDate = item.timestamp ? new Date(item.timestamp) : parseLocalDate(item.time);
+      return itemDate <= to;
     });
   }
 
-  let html = `
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>抽獎者</th>
-              <th>獎項</th>
-              <th>時間</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-  filtered.forEach((item) => {
-    if (item.isSeparator) {
-      html += `<tr class="separator"><td colspan="3"></td></tr>`;
+  // Stats
+  updateHistoryStats(filtered);
+
+  // Pagination
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / HISTORY_PAGE_SIZE));
+  historyPage = Math.min(page, totalPages);
+  const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+  const paged = filtered.slice(start, start + HISTORY_PAGE_SIZE);
+
+  // Record count
+  const countEl = document.getElementById("record-count");
+  if (countEl) {
+    if (totalItems === 0) {
+      countEl.textContent = "無紀錄";
     } else {
-      html += `
-                <tr style="color: ${item.textColor || "#333"}">
-                  <td>${item.player}</td>
-                  <td>${item.customText || item.name}</td>
-                  <td>${item.time}</td>
-                </tr>
-            `;
+      countEl.textContent = `顯示 ${start + 1}-${Math.min(start + HISTORY_PAGE_SIZE, totalItems)} / 共 ${totalItems} 筆`;
     }
+  }
+
+  // Render table
+  let html = `
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>抽獎者</th>
+          <th>獎品</th>
+          <th>時間</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  paged.forEach((item) => {
+    const player = highlightText(item.player || "", query);
+    const prize = highlightText(item.customText || item.name || "", query);
+    html += `
+      <tr style="color: ${item.textColor || "#333"}">
+        <td>${player}</td>
+        <td>${prize}</td>
+        <td>${item.time}</td>
+      </tr>
+    `;
   });
+
+  if (paged.length === 0) {
+    html += `<tr><td colspan="3" style="color:#999;padding:20px;">無符合條件的紀錄</td></tr>`;
+  }
+
   html += `</tbody></table>`;
   historyDiv.innerHTML = html;
+
+  // Pagination controls
+  renderPagination(totalPages);
 }
-document.getElementById("history-search")?.addEventListener("input", (e) => {
-  updateHistoryDisplay(e.target.value);
+
+function parseLocalDate(timeStr) {
+  if (!timeStr) return new Date(0);
+  const d = new Date(timeStr);
+  return isNaN(d.getTime()) ? new Date(0) : d;
+}
+
+function highlightText(text, query) {
+  if (!query || !text) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(`(${escaped})`, "gi"), "<mark>$1</mark>");
+}
+
+function renderPagination(totalPages) {
+  const pagDiv = document.getElementById("history-pagination");
+  if (!pagDiv) return;
+
+  if (totalPages <= 1) {
+    pagDiv.innerHTML = "";
+    return;
+  }
+
+  pagDiv.innerHTML = `
+    <button class="page-btn" onclick="goHistoryPage(${historyPage - 1})" ${historyPage <= 1 ? "disabled" : ""}>上一頁</button>
+    <span>第 ${historyPage} / ${totalPages} 頁</span>
+    <button class="page-btn" onclick="goHistoryPage(${historyPage + 1})" ${historyPage >= totalPages ? "disabled" : ""}>下一頁</button>
+  `;
+}
+
+function goHistoryPage(page) {
+  historyPage = page;
+  applyHistoryFilters();
+}
+
+/***********************************************
+ * History: Stats
+ ***********************************************/
+function updateHistoryStats(items) {
+  const statsDiv = document.getElementById("history-stats");
+  if (!statsDiv) return;
+
+  if (!items.length) {
+    statsDiv.innerHTML = "";
+    return;
+  }
+
+  const totalDraws = items.length;
+  const players = new Set(items.map((i) => i.player));
+  const prizeCount = {};
+  items.forEach((i) => {
+    const key = i.customText || i.name;
+    prizeCount[key] = (prizeCount[key] || 0) + 1;
+  });
+
+  const sorted = Object.entries(prizeCount).sort((a, b) => b[1] - a[1]);
+  const topPrize = sorted[0];
+
+  statsDiv.innerHTML = `
+    <div class="stat-item">總抽獎次數：<span class="stat-value">${totalDraws}</span></div>
+    <div class="stat-item">抽獎者人數：<span class="stat-value">${players.size}</span></div>
+    <div class="stat-item">獎品種類：<span class="stat-value">${sorted.length}</span></div>
+    ${topPrize ? `<div class="stat-item">最常見獎項：<span class="stat-value">${topPrize[0]} (${topPrize[1]}次)</span></div>` : ""}
+  `;
+}
+
+/***********************************************
+ * History: Filter controls
+ ***********************************************/
+function applyHistoryFilters() {
+  const query = document.getElementById("history-search")?.value || "";
+  const dateFrom = document.getElementById("history-date-from")?.value || "";
+  const dateTo = document.getElementById("history-date-to")?.value || "";
+  updateHistoryDisplay({ query, dateFrom, dateTo, page: historyPage });
+}
+
+function resetHistoryFilters() {
+  const search = document.getElementById("history-search");
+  const from = document.getElementById("history-date-from");
+  const to = document.getElementById("history-date-to");
+  if (search) search.value = "";
+  if (from) from.value = "";
+  if (to) to.value = "";
+  historyPage = 1;
+  applyHistoryFilters();
+}
+
+document.getElementById("history-search")?.addEventListener("input", () => {
+  historyPage = 1;
+  applyHistoryFilters();
 });
 
-/** 複製紀錄到剪貼簿 */
+/***********************************************
+ * History: Copy / Export / Clear
+ ***********************************************/
 function copyHistoryToClipboard() {
-  const hist = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
-  let csv = "抽獎者,獎項,時間\n";
+  const hist = (JSON.parse(localStorage.getItem("lotteryHistory")) || [])
+    .filter((x) => !x.isSeparator);
+  let csv = "Player,Prize,Time\n";
   hist.forEach((item) => {
-    if (!item.isSeparator) {
-      csv += `${item.player},${item.customText || item.name},${item.time}\n`;
-    }
+    csv += `${item.player},${item.customText || item.name},${item.time}\n`;
   });
   navigator.clipboard
     .writeText(csv)
-    .then(() => {
-      Swal.fire("成功！", "歷史紀錄已複製到剪貼簿。", "success");
-    })
-    .catch(() => {
-      Swal.fire("錯誤！", "複製失敗", "error");
-    });
-  updateHistoryDisplay();
+    .then(() => Swal.fire("Copied.", "History copied to clipboard.", "success"))
+    .catch(() => Swal.fire("Error", "Copy failed.", "error"));
 }
-document
-  .getElementById("copy-btn")
-  ?.addEventListener("click", copyHistoryToClipboard);
+document.getElementById("copy-btn")?.addEventListener("click", copyHistoryToClipboard);
 
-/** 匯出歷史紀錄 -> Excel */
 function exportHistoryToExcel() {
-  const hist = JSON.parse(localStorage.getItem("lotteryHistory")) || [];
-  const data = hist
-    .filter((x) => !x.isSeparator)
-    .map((item) => ({
-      抽獎者: item.player,
-      獎項: item.customText || item.name,
-      時間: item.time,
-    }));
+  const hist = (JSON.parse(localStorage.getItem("lotteryHistory")) || [])
+    .filter((x) => !x.isSeparator);
+  const data = hist.map((item) => ({
+    Player: item.player,
+    Prize: item.customText || item.name,
+    Time: item.time,
+  }));
   if (typeof XLSX === "undefined") {
-    Swal.fire("缺少 SheetJS", "", "error");
+    Swal.fire("Missing SheetJS.", "", "error");
     return;
   }
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "LotteryHistory");
   XLSX.writeFile(wb, "lottery_history.xlsx");
-  Swal.fire("成功！", "歷史紀錄已匯出為 Excel。", "success");
-  updateHistoryDisplay();
+  Swal.fire("Exported.", "History saved to Excel.", "success");
 }
-document
-  .getElementById("export-btn")
-  ?.addEventListener("click", exportHistoryToExcel);
+document.getElementById("export-btn")?.addEventListener("click", exportHistoryToExcel);
 
-/** 清空歷史 */
 function clearHistory() {
   Swal.fire({
-    title: "確定清空歷史紀錄？",
-    text: "此操作無法復原！",
+    title: "清空紀錄？",
+    text: "此操作無法復原。",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "確定",
+    confirmButtonText: "清空",
     cancelButtonText: "取消",
   }).then((r) => {
     if (r.isConfirmed) {
       localStorage.removeItem("lotteryHistory");
-      updateHistoryDisplay();
+      historyPage = 1;
+      applyHistoryFilters();
       updateStorageSize();
-      Swal.fire("歷史紀錄已清空！", "", "success");
+      Swal.fire("紀錄已清空。", "", "success");
     }
   });
 }
 
-/** 計算 localStorage 用量，顯示在前端 */
+/***********************************************
+ * Storage size display
+ ***********************************************/
 function updateStorageSize() {
   let total = 0;
   for (let key in localStorage) {
@@ -524,18 +709,17 @@ function updateStorageSize() {
   const mb = (total / 1024 / 1024).toFixed(2);
   const el = document.getElementById("storage-size");
   if (el) {
-    el.textContent = `紀錄使用空間: ${kb} KB (${mb} MB)`;
+    el.textContent = `儲存空間：${kb} KB (${mb} MB)`;
   }
 }
 
-/*
- * 機率分攤與後臺管理相關/
-
-/**
- * 依「剩餘獎項」比例分攤機率
- * quantity=0 的獎項機率歸零，並把這些機率依照原先機率比例分給還有數量的獎項
- */
+/***********************************************
+ * Probability management
+ ***********************************************/
 function adjustProbabilities() {
+  prizes.forEach((p) => {
+    if (p.probability < 0) p.probability = 0;
+  });
   const zeroed = prizes.filter((p) => p.quantity === 0);
   const active = prizes.filter((p) => p.quantity > 0);
 
@@ -547,6 +731,17 @@ function adjustProbabilities() {
   });
 
   const sumActiveProb = active.reduce((acc, a) => acc + a.probability, 0);
+  if (sumActiveProb <= 0) {
+    const equalProb = parseFloat((100 / active.length).toFixed(2));
+    active.forEach((a) => {
+      a.probability = equalProb;
+    });
+    const total = active.reduce((acc, a) => acc + a.probability, 0);
+    if (total !== 100) {
+      active[0].probability += 100 - total;
+    }
+    return;
+  }
   if (sumActiveProb > 0 && sumZeroProb > 0) {
     active.forEach((a) => {
       const ratio = a.probability / sumActiveProb;
@@ -555,12 +750,24 @@ function adjustProbabilities() {
   }
 }
 
-/**
- * 自動分配機率
- */
 async function distributeProbabilities() {
-  const currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
-  if (currentTotal === 0) return;
+  prizes.forEach((p) => {
+    if (p.probability < 0) p.probability = 0;
+  });
+  let currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
+  if (currentTotal <= 0) {
+    const active = prizes.filter((p) => p.quantity > 0);
+    if (!active.length) return;
+    const equalProb = parseFloat((100 / active.length).toFixed(2));
+    active.forEach((p) => {
+      p.probability = equalProb;
+    });
+    const total = active.reduce((sum, p) => sum + p.probability, 0);
+    if (total !== 100) {
+      active[0].probability += 100 - total;
+    }
+    currentTotal = prizes.reduce((sum, p) => sum + p.probability, 0);
+  }
 
   const factor = 100 / currentTotal;
   prizes.forEach((p) => {
@@ -585,54 +792,56 @@ async function distributeProbabilities() {
   try {
     await saveAllPrizes(prizes);
   } catch (err) {
-    console.error("儲存時發生錯誤:", err);
+    console.error("Failed to normalize probabilities:", err);
   }
 }
 
-/** 新增獎項 */
+/***********************************************
+ * Prize settings modal
+ ***********************************************/
 function showAddPrizeModal() {
   Swal.fire({
-    title: "選擇獎項圖片",
+    title: "Add prize",
     html: `
-          <input type="file" id="prize-image" accept=".png,.jpg,.jpeg" style="margin:10px 0;">
-          <div>機率(%): <input type="number" id="new-prob" min="0" max="100" value="10" style="margin:10px 0;"></div>
-          <div>數量: <input type="number" id="new-qty" min="0" value="5" style="margin:10px 0;"></div>
-          <div>顯示文字: <input type="text" id="new-text" placeholder="預設為檔案名稱" style="margin:10px 0;"></div>
-          <div>文字顏色: <input type="color" id="text-color" value="#333333" style="margin:10px 0;"></div>
-          <div>背景顏色: <input type="color" id="bg-color" value="#ffffff" style="margin:10px 0;"></div>
-          <div>顯示模式:
-            <select id="display-mode">
-              <option value="name">名稱</option>
-              <option value="image">圖片</option>
-              <option value="all">全部</option>
-            </select>
-          </div>
-        `,
+      <input type="file" id="prize-image" accept=".png,.jpg,.jpeg" style="margin:10px 0;">
+      <div>Probability(%): <input type="number" id="new-prob" min="0" max="100" value="10" style="margin:10px 0;"></div>
+      <div>Quantity: <input type="number" id="new-qty" min="0" value="5" style="margin:10px 0;"></div>
+      <div>Display text: <input type="text" id="new-text" placeholder="Optional label" style="margin:10px 0;"></div>
+      <div>Text color: <input type="color" id="text-color" value="#333333" style="margin:10px 0;"></div>
+      <div>Background color: <input type="color" id="bg-color" value="#ffffff" style="margin:10px 0;"></div>
+      <div>Display mode:
+        <select id="display-mode">
+          <option value="name">Name</option>
+          <option value="image">Image</option>
+          <option value="all">Both</option>
+        </select>
+      </div>
+    `,
     showCancelButton: true,
-    confirmButtonText: "添加",
-    cancelButtonText: "取消",
+    confirmButtonText: "Add",
+    cancelButtonText: "Cancel",
     preConfirm: () => {
       const fileInput = document.getElementById("prize-image");
-      const probability =
-        parseFloat(document.getElementById("new-prob").value) || 10;
+      const probability = parseFloat(document.getElementById("new-prob").value) || 10;
       const quantity = parseInt(document.getElementById("new-qty").value) || 5;
       const customText = document.getElementById("new-text").value.trim();
       const textColor = document.getElementById("text-color").value;
       const bgColor = document.getElementById("bg-color").value;
       const mode = document.getElementById("display-mode").value;
 
+      if (probability < 0 || quantity < 0) {
+        Swal.fire("Probability and quantity must be non-negative.", "", "warning");
+        return false;
+      }
+
       if (!fileInput.files || fileInput.files.length === 0) {
-        Swal.fire("請選擇圖片檔案！", "", "warning");
+        Swal.fire("Please select an image file.", "", "warning");
         return false;
       }
       const file = fileInput.files[0];
       const fName = file.name.toLowerCase();
-      if (
-        !fName.endsWith(".png") &&
-        !fName.endsWith(".jpg") &&
-        !fName.endsWith(".jpeg")
-      ) {
-        Swal.fire("僅支援 .png / .jpg / .jpeg", "", "warning");
+      if (!fName.endsWith(".png") && !fName.endsWith(".jpg") && !fName.endsWith(".jpeg")) {
+        Swal.fire("Only .png, .jpg, .jpeg are supported.", "", "warning");
         return false;
       }
       const reader = new FileReader();
@@ -657,58 +866,51 @@ function showAddPrizeModal() {
     },
   }).then(async (r) => {
     if (r.isConfirmed) {
-      // 寫回 IndexedDB - localStorage
       try {
         await saveAllPrizes(prizes);
-        Swal.fire("獎項已添加！", "", "success").then(() => {
+        Swal.fire("Prize added.", "", "success").then(() => {
           refreshPrizeTableInModal();
         });
       } catch (err) {
-        console.error("儲存獎項時發生錯誤:", err);
-        Swal.fire(
-          "錯誤",
-          "儲存時發生錯誤，請嘗試縮小圖片或減少數量。",
-          "error"
-        );
+        console.error("Failed to save prize data:", err);
+        Swal.fire("Error", "Failed to save prize data. Try smaller images or fewer prizes.", "error");
       }
     }
   });
 }
 
-/** 匯出獎項 -> Excel (不含圖片) */
 function exportPrizesToExcel() {
   const data = prizes.map((p) => ({
-    名稱: p.name,
-    機率: p.probability,
-    數量: p.quantity,
-    顯示文字: p.customText,
-    文字顏色: p.textColor,
-    背景顏色: p.bgColor,
-    顯示模式: p.displayMode,
+    Name: p.name,
+    Probability: p.probability,
+    Quantity: p.quantity,
+    DisplayText: p.customText,
+    TextColor: p.textColor,
+    BackgroundColor: p.bgColor,
+    DisplayMode: p.displayMode,
   }));
   if (typeof XLSX === "undefined") {
-    Swal.fire("錯誤", "未加載 SheetJS", "error");
+    Swal.fire("Error", "SheetJS is not loaded.", "error");
     return;
   }
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "PrizeSettings");
   XLSX.writeFile(wb, "prizes_settings.xlsx");
-  Swal.fire("成功！", "獎項已匯出為 Excel。", "success");
+  Swal.fire("Exported.", "Prize settings saved to Excel.", "success");
 }
 
-/** 匯入獎項 (Excel) -> 只匯入文字資訊，不含圖片 */
 function importPrizesFromExcelUI() {
   Swal.fire({
-    title: "匯入 Excel",
+    title: "Import Excel",
     html: `<input type="file" id="prizeFile" accept=".xlsx, .xls" />`,
     showCancelButton: true,
-    confirmButtonText: "匯入",
-    cancelButtonText: "取消",
+    confirmButtonText: "Import",
+    cancelButtonText: "Cancel",
     preConfirm: () => {
       const fileInput = document.getElementById("prizeFile");
       if (!fileInput.files || fileInput.files.length === 0) {
-        Swal.showValidationMessage("請先選擇檔案！");
+        Swal.showValidationMessage("Please choose a file.");
         return false;
       }
       return fileInput.files[0];
@@ -719,6 +921,7 @@ function importPrizesFromExcelUI() {
     }
   });
 }
+
 async function handlePrizesFile(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -729,23 +932,22 @@ async function handlePrizesFile(file) {
 
     const header = jsonData[0];
     if (!header || !header.length) {
-      Swal.fire("匯入失敗", "Excel 沒有標題列", "error");
+      Swal.fire("Import failed.", "The Excel file has no header row.", "error");
       return;
     }
-    const nameIdx = header.indexOf("名稱");
-    const probIdx = header.indexOf("機率");
-    const qtyIdx = header.indexOf("數量");
-    const textIdx = header.indexOf("顯示文字");
-    const txtColorIdx = header.indexOf("文字顏色");
-    const bgColorIdx = header.indexOf("背景顏色");
-    const modeIdx = header.indexOf("顯示模式");
+    const nameIdx = header.indexOf("Name");
+    const probIdx = header.indexOf("Probability");
+    const qtyIdx = header.indexOf("Quantity");
+    const textIdx = header.indexOf("DisplayText");
+    const txtColorIdx = header.indexOf("TextColor");
+    const bgColorIdx = header.indexOf("BackgroundColor");
+    const modeIdx = header.indexOf("DisplayMode");
 
     if (nameIdx < 0 || probIdx < 0 || qtyIdx < 0) {
-      Swal.fire("匯入失敗", "至少需要「名稱、機率、數量」欄", "error");
+      Swal.fire("Import failed.", "Required columns: Name, Probability, Quantity.", "error");
       return;
     }
 
-    // 清空再重建
     prizes = [];
 
     for (let i = 1; i < jsonData.length; i++) {
@@ -756,10 +958,8 @@ async function handlePrizesFile(file) {
       const probVal = parseFloat(row[probIdx]) || 0;
       const qtyVal = parseInt(row[qtyIdx]) || 0;
       const customText = textIdx >= 0 && row[textIdx] ? row[textIdx] : "";
-      const textColor =
-        txtColorIdx >= 0 && row[txtColorIdx] ? row[txtColorIdx] : "#333333";
-      const bgColor =
-        bgColorIdx >= 0 && row[bgColorIdx] ? row[bgColorIdx] : "#ffffff";
+      const textColor = txtColorIdx >= 0 && row[txtColorIdx] ? row[txtColorIdx] : "#333333";
+      const bgColor = bgColorIdx >= 0 && row[bgColorIdx] ? row[bgColorIdx] : "#ffffff";
       const mode = modeIdx >= 0 && row[modeIdx] ? row[modeIdx] : "name";
 
       prizes.push({
@@ -775,16 +975,15 @@ async function handlePrizesFile(file) {
     }
     await saveAllPrizes(prizes);
     adjustProbabilities();
-    Swal.fire("成功", "已從 Excel 匯入獎項", "success").then(() => {
+    Swal.fire("Imported.", "Prizes imported from Excel.", "success").then(() => {
       refreshPrizeTableInModal();
     });
   } catch (err) {
     console.error(err);
-    Swal.fire("匯入失敗", "讀取檔案時發生錯誤", "error");
+    Swal.fire("Import failed.", "Failed to read file.", "error");
   }
 }
 
-/** 獎項表格 */
 function refreshPrizeTableInModal() {
   const tbody = document.getElementById("prize-table-tbody");
   if (!tbody) return;
@@ -792,56 +991,34 @@ function refreshPrizeTableInModal() {
   tbody.innerHTML = prizes
     .map((p, i) => {
       return `
-          <tr>
-            <td><input type="checkbox" class="delete-check" data-index="${i}"></td>
-            <td>${p.name}</td>
-            <td><input type="number" class="prob-input" min="0" max="100" value="${
-              p.probability
-            }" data-index="${i}"></td>
-            <td><input type="number" class="qty-input" min="0" value="${
-              p.quantity
-            }" data-qty-index="${i}"></td>
-            <td><input type="text" class="text-input" value="${
-              p.customText || p.name
-            }" data-text-index="${i}"></td>
-            <td><input type="color" class="color-input" value="${
-              p.textColor || "#333333"
-            }" data-text-color-index="${i}"></td>
-            <td><input type="color" class="color-input" value="${
-              p.bgColor || "#ffffff"
-            }" data-bg-color-index="${i}"></td>
-            <td>
-              <select data-mode-index="${i}" class="mode-select">
-                <option value="name"  ${
-                  p.displayMode === "name" ? "selected" : ""
-                }>名稱</option>
-                <option value="image" ${
-                  p.displayMode === "image" ? "selected" : ""
-                }>圖片</option>
-                <option value="all"   ${
-                  p.displayMode === "all" ? "selected" : ""
-                }>全部</option>
-              </select>
-            </td>
-            <td>
-              <!-- 縮小預覽 -->
-              <div style="margin-bottom:5px;">
-                ${
-                  p.image
-                    ? `<img src="${p.image}" alt="preview" style="width:40px;height:40px;object-fit:cover;">`
-                    : "N/A"
-                }
-              </div>
-              <button type="button" class="action-btn" style="padding:5px;" onclick="updatePrizeImage(${i})">
-                更換圖片
-              </button>
-            </td>
-          </tr>
-        `;
+        <tr>
+          <td><input type="checkbox" class="delete-check" data-index="${i}"></td>
+          <td>${p.name}</td>
+          <td><input type="number" class="prob-input" min="0" max="100" value="${p.probability}" data-index="${i}"></td>
+          <td><input type="number" class="qty-input" min="0" value="${p.quantity}" data-qty-index="${i}"></td>
+          <td><input type="text" class="text-input" value="${p.customText || p.name}" data-text-index="${i}"></td>
+          <td><input type="color" class="color-input" value="${p.textColor || "#333333"}" data-text-color-index="${i}"></td>
+          <td><input type="color" class="color-input" value="${p.bgColor || "#ffffff"}" data-bg-color-index="${i}"></td>
+          <td>
+            <select data-mode-index="${i}" class="mode-select">
+              <option value="name" ${p.displayMode === "name" ? "selected" : ""}>Name</option>
+              <option value="image" ${p.displayMode === "image" ? "selected" : ""}>Image</option>
+              <option value="all" ${p.displayMode === "all" ? "selected" : ""}>Both</option>
+            </select>
+          </td>
+          <td>
+            <div style="margin-bottom:5px;">
+              ${p.image ? `<img src="${p.image}" alt="preview" style="width:40px;height:40px;object-fit:cover;">` : "N/A"}
+            </div>
+            <button type="button" class="action-btn" style="padding:5px;" onclick="updatePrizeImage(${i})">
+              Update image
+            </button>
+          </td>
+        </tr>
+      `;
     })
     .join("");
 
-  // 更新「總機率」提示文字 (只計算 quantity>0)
   const tot = prizes
     .filter((x) => x.quantity > 0)
     .reduce((sum, p) => sum + p.probability, 0);
@@ -850,12 +1027,11 @@ function refreshPrizeTableInModal() {
   if (warnEl) {
     warnEl.textContent =
       Math.round(tot) === 100
-        ? "總機率為 100%"
-        : `注意：目前總機率為 ${tot.toFixed(2)}%，請調整至 100%`;
+        ? "Total probability is 100%"
+        : `Warning: total probability is ${tot.toFixed(2)}%. Please normalize to 100%.`;
   }
 }
 
-/** 更換圖片 */
 function updatePrizeImage(index) {
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -866,13 +1042,13 @@ function updatePrizeImage(index) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      prizes[index].image = ev.target.result; // base64
+      prizes[index].image = ev.target.result;
       try {
         await saveAllPrizes(prizes);
         refreshPrizeTableInModal();
       } catch (err) {
-        console.error("更新圖片時發生錯誤:", err);
-        Swal.fire("錯誤", "儲存圖片時發生錯誤，請嘗試壓縮圖片。", "error");
+        console.error("Failed to update image data:", err);
+        Swal.fire("Error", "Failed to update image data.", "error");
       }
     };
     reader.readAsDataURL(file);
@@ -880,59 +1056,51 @@ function updatePrizeImage(index) {
   fileInput.click();
 }
 
-/** 後臺設置按鈕 -> 彈窗 */
 document.getElementById("settings-btn")?.addEventListener("click", () => {
   let html = `
-        <h3>調整獎項設置</h3>
-        <table class="prize-table">
-            <thead>
-                <tr>
-                    <th>選取</th>
-                    <th>名稱</th>
-                    <th>機率(%)</th>
-                    <th>數量</th>
-                    <th>顯示文字</th>
-                    <th>文字顏色</th>
-                    <th>背景顏色</th>
-                    <th>顯示模式</th>
-                    <th>圖片</th>
-                </tr>
-            </thead>
-            <tbody id="prize-table-tbody">
-            </tbody>
-        </table>
-        <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">刪除選中</button>
-        <button type="button" onclick="showAddPrizeModal()" class="action-btn">增加獎池</button>
-        <button type="button" onclick="distributeProbabilities()" class="action-btn">自動分配機率</button>
-        <button type="button" onclick="importPrizesFromExcelUI()" class="action-btn">匯入獎項</button>
-        <button type="button" onclick="exportPrizesToExcel()" class="action-btn">匯出獎項</button>
+    <h3>Prize settings</h3>
+    <table class="prize-table">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Name</th>
+          <th>Probability (%)</th>
+          <th>Quantity</th>
+          <th>Display text</th>
+          <th>Text color</th>
+          <th>Background color</th>
+          <th>Display mode</th>
+          <th>Image</th>
+        </tr>
+      </thead>
+      <tbody id="prize-table-tbody">
+      </tbody>
+    </table>
+    <button type="button" onclick="deleteSelectedPrizes()" class="action-btn">Delete selected</button>
+    <button type="button" onclick="showAddPrizeModal()" class="action-btn">Add prize</button>
+    <button type="button" onclick="distributeProbabilities()" class="action-btn">Normalize probabilities</button>
+    <button type="button" onclick="importPrizesFromExcelUI()" class="action-btn">Import prizes</button>
+    <button type="button" onclick="exportPrizesToExcel()" class="action-btn">Export prizes</button>
 
-        <div>縮圖尺寸(px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
-        <div>放大尺寸(px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
-        <p id="probability-warning"></p>
-    `;
+    <div>Thumbnail size (px): <input type="number" min="20" max="200" value="${thumbnailSize}" id="thumbnail-size"></div>
+    <div>Enlarged size (px): <input type="number" min="100" max="800" value="${enlargedSize}" id="enlarged-size"></div>
+    <p id="probability-warning"></p>
+  `;
 
   Swal.fire({
     html,
     showCancelButton: true,
-    confirmButtonText: "保存",
-    cancelButtonText: "取消",
+    confirmButtonText: "Save",
+    cancelButtonText: "Cancel",
     focusConfirm: false,
     width: "1600px",
     preConfirm: async () => {
-      // 讀取表單
       const probInputs = document.querySelectorAll(".swal2-modal .prob-input");
       const qtyInputs = document.querySelectorAll(".swal2-modal .qty-input");
       const textInputs = document.querySelectorAll(".swal2-modal .text-input");
-      const textColorInputs = document.querySelectorAll(
-        ".swal2-modal [data-text-color-index]"
-      );
-      const bgColorInputs = document.querySelectorAll(
-        ".swal2-modal [data-bg-color-index]"
-      );
-      const modeSelects = document.querySelectorAll(
-        ".swal2-modal .mode-select"
-      );
+      const textColorInputs = document.querySelectorAll(".swal2-modal [data-text-color-index]");
+      const bgColorInputs = document.querySelectorAll(".swal2-modal [data-bg-color-index]");
+      const modeSelects = document.querySelectorAll(".swal2-modal .mode-select");
 
       probInputs.forEach((el) => {
         const idx = el.getAttribute("data-index");
@@ -959,85 +1127,70 @@ document.getElementById("settings-btn")?.addEventListener("click", () => {
         prizes[idx].displayMode = el.value;
       });
 
-      // 檢查機率總和 (quantity>0)
+      const hasNegative = prizes.some((p) => p.probability < 0 || p.quantity < 0);
+      if (hasNegative) {
+        Swal.fire("Probability and quantity must be non-negative.", "", "warning");
+        return false;
+      }
+
       const totalProb = prizes
         .filter((x) => x.quantity > 0)
         .reduce((sum, p) => sum + p.probability, 0);
-      if (Math.round(totalProb) !== 100) {
+      if (Math.abs(totalProb - 100) > 0.01) {
         Swal.fire(
-          "機率總和不等於 100%！",
-          "請先「自動分配機率」或自行調整",
+          "Probability total must be 100%.",
+          "Use Normalize Probabilities or adjust values manually.",
           "warning"
         );
         return false;
       }
 
-      // 更新尺寸
-      thumbnailSize =
-        parseInt(document.getElementById("thumbnail-size").value) || 80;
-      enlargedSize =
-        parseInt(document.getElementById("enlarged-size").value) || 300;
+      thumbnailSize = parseInt(document.getElementById("thumbnail-size").value) || 80;
+      enlargedSize = parseInt(document.getElementById("enlarged-size").value) || 300;
       localStorage.setItem("thumbnailSize", thumbnailSize);
       localStorage.setItem("enlargedSize", enlargedSize);
-      document.documentElement.style.setProperty(
-        "--thumbnail-size",
-        `${thumbnailSize}px`
-      );
+      document.documentElement.style.setProperty("--thumbnail-size", `${thumbnailSize}px`);
 
-      // 同步儲存 prizes
       try {
         await saveAllPrizes(prizes);
       } catch (err) {
-        console.error("儲存發生錯誤:", err);
-        Swal.fire(
-          "錯誤",
-          "儲存獎項時發生錯誤，請嘗試縮小圖片或其他方式。",
-          "error"
-        );
+        console.error("Failed to save prize data:", err);
+        Swal.fire("Error", "Failed to save prize data. Try smaller images or fewer prizes.", "error");
         return false;
       }
     },
   }).then((r) => {
     if (r.isConfirmed) {
-      Swal.fire("設置已保存！", "", "success");
+      Swal.fire("Settings saved.", "", "success");
     }
   });
 
-  // 彈窗生成填充表格
   setTimeout(() => {
     refreshPrizeTableInModal();
   }, 50);
 });
 
-/** 刪除選中的獎項 */
 async function deleteSelectedPrizes() {
-  const checks = document.querySelectorAll(
-    ".swal2-modal .delete-check:checked"
-  );
-  const toDelete = Array.from(checks).map((cb) =>
-    parseInt(cb.getAttribute("data-index"))
-  );
+  const checks = document.querySelectorAll(".swal2-modal .delete-check:checked");
+  const toDelete = Array.from(checks).map((cb) => parseInt(cb.getAttribute("data-index")));
   if (!toDelete.length) {
-    Swal.showValidationMessage("請至少選中一個獎項！");
+    Swal.showValidationMessage("Select at least one prize.");
     return;
   }
   prizes = prizes.filter((_, i) => !toDelete.includes(i));
 
-  // 更新畫面 & 同步寫回 IndexedDB
   try {
     await saveAllPrizes(prizes);
     refreshPrizeTableInModal();
   } catch (err) {
-    console.error("刪除獎項時發生錯誤:", err);
-    Swal.fire("錯誤", "寫入資料庫時發生錯誤。", "error");
+    console.error("Failed to delete prizes:", err);
+    Swal.fire("Error", "Failed to save prize data.", "error");
   }
 }
 
-/**
- * 模擬抽獎 count 次（不影響真實 prizes）
- *  - 會複製一份獎池，並在每抽一次後執行動態分配
- *  - 回傳：{ "獎項名稱": 出現次數, ... } 形式的計數
- */
+/***********************************************
+ * Test draw simulation
+ ***********************************************/
 function simulateDraws(count) {
   const clonedPrizes = JSON.parse(JSON.stringify(prizes));
 
@@ -1058,7 +1211,6 @@ function simulateDraws(count) {
     }
   }
 
-  // 預先調整一次
   adjustProbForCloned();
 
   const distribution = {};
@@ -1085,47 +1237,39 @@ function simulateDraws(count) {
       distribution[picked.name] = (distribution[picked.name] || 0) + 1;
     }
 
-    // 每抽完一次就再分配
     adjustProbForCloned();
   }
 
   return distribution;
 }
 
-/**
- * 將分佈物件 + 總抽數 -> 輸出成統計表 (HTML 字串)
- */
 function buildDistributionTable(dist, totalDraws) {
-  // 先把結果依抽中次數降冪排序
   const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
   let html = `
-      <table class="history-table" style="margin:0 auto;">
-        <thead>
-          <tr>
-            <th>獎項名稱</th>
-            <th>抽中次數</th>
-            <th>比例(%)</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+    <table class="history-table" style="margin:0 auto;">
+      <thead>
+        <tr>
+          <th>Prize</th>
+          <th>Hits</th>
+          <th>Rate (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
   entries.forEach(([prizeName, count]) => {
     const ratio = ((count / totalDraws) * 100).toFixed(2);
     html += `
-          <tr>
-            <td>${prizeName}</td>
-            <td>${count}</td>
-            <td>${ratio}</td>
-          </tr>
-        `;
+      <tr>
+        <td>${prizeName}</td>
+        <td>${count}</td>
+        <td>${ratio}</td>
+      </tr>
+    `;
   });
   html += `</tbody></table>`;
   return html;
 }
 
-/**
- * 抽獎模擬，各抽 100 次、1000 次並顯示結果
- */
 function testDrawLottery() {
   const dist100 = simulateDraws(100);
   const dist1000 = simulateDraws(1000);
@@ -1134,18 +1278,18 @@ function testDrawLottery() {
   const table1000 = buildDistributionTable(dist1000, 1000);
 
   const html = `
-      <h3>模擬抽獎 100 次</h3>
-      ${table100}
-      <hr/>
-      <h3>模擬抽獎 1000 次</h3>
-      ${table1000}
-    `;
+    <h3>Simulation: 100 draws</h3>
+    ${table100}
+    <hr/>
+    <h3>Simulation: 1000 draws</h3>
+    ${table1000}
+  `;
 
   Swal.fire({
-    title: "測試抽獎結果",
+    title: "Simulation results",
     html,
     width: "800px",
     showConfirmButton: true,
-    confirmButtonText: "關閉",
+    confirmButtonText: "OK",
   });
 }

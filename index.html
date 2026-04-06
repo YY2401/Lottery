@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
   </head>
   <body>
     <h1>Lottery</h1>
@@ -18,26 +19,32 @@
     </div>
 
     <div class="buttons">
-      <button onclick="drawSingle()">抽獎</button>
-      <button onclick="drawMultiple(5)">五連抽</button>
-      <button onclick="drawMultiple(10)">十連抽</button>
+      <button id="btn-single" onclick="drawSingle()">抽獎</button>
+      <button id="btn-multi5" onclick="drawMultiple(5)">五連抽</button>
+      <button id="btn-multi10" onclick="drawMultiple(10)">十連抽</button>
     </div>
 
     <div id="result" class="result"></div>
 
     <h2>歷史紀錄</h2>
     <div class="history-section">
-      <input
-        type="text"
-        id="history-search"
-        class="history-search"
-        placeholder="搜尋抽獎者或獎項"
-      />
+      <div class="history-filters">
+        <input
+          type="text"
+          id="history-search"
+          class="history-search"
+          placeholder="搜尋抽獎者或獎項"
+        />
+        <label>從：<input type="date" id="history-date-from" /></label>
+        <label>到：<input type="date" id="history-date-to" /></label>
+        <button onclick="applyHistoryFilters()" class="filter-btn">篩選</button>
+        <button onclick="resetHistoryFilters()" class="filter-btn filter-btn-reset">重置</button>
+      </div>
+      <div id="history-stats" class="history-stats"></div>
       <span id="record-count" class="record-count"></span>
-      <span id="storage-size" class="storage-size"
-        >localStorage 使用空間: 0 KB</span
-      >
+      <span id="storage-size" class="storage-size">localStorage 使用空間: 0 KB</span>
       <div id="history" class="history"></div>
+      <div id="history-pagination" class="history-pagination"></div>
     </div>
 
     <button onclick="clearHistory()" class="clear-btn">清空紀錄</button>
@@ -48,6 +55,9 @@
     <button id="test-draw-btn" class="settings-btn" style="right: 120px">
       測試抽獎
     </button>
+
+    <div id="particle-container" class="particle-container"></div>
+
     <script src="script.js"></script>
   </body>
 </html>

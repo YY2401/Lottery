@@ -22,11 +22,14 @@ button {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: background-color 0.2s;
 }
 button:hover {
   background-color: #0056b3;
-  transform: scale(1.05);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .settings-btn {
@@ -40,11 +43,10 @@ button:hover {
   border-radius: 8px;
   cursor: pointer;
   z-index: 1000;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: background-color 0.2s;
 }
 .settings-btn:hover {
   background-color: #218838;
-  transform: scale(1.05);
 }
 
 .input-section {
@@ -64,6 +66,43 @@ button:hover {
   width: 200px;
 }
 
+/* -- 動畫容器 (老虎機) -- */
+.animation-container {
+  width: 260px;
+  height: 80px;
+  margin: 10px auto;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.animation-container.active {
+  display: flex;
+}
+.slot-reel {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  width: 100%;
+  text-align: center;
+}
+.slot-item {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  padding: 0 10px;
+}
+
 /* -- 抽獎結果 -- */
 .result {
   margin-top: 20px;
@@ -71,6 +110,7 @@ button:hover {
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
+  min-height: 20px;
 }
 
 .result-item {
@@ -78,9 +118,10 @@ button:hover {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  animation: scaleIn 0.3s ease-out;
   padding: 5px;
   border-radius: 5px;
+  opacity: 0;
+  transform: scale(0);
 }
 .result-item img {
   max-width: var(--thumbnail-size, 80px);
@@ -93,37 +134,149 @@ button:hover {
   color: #333;
 }
 
-@keyframes scaleIn {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* -- 粒子慶祝 -- */
+.particle-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 99999;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 /* -- 歷史紀錄 -- */
 .history-section {
-  margin: 20px 0;
+  margin: 20px auto;
+  max-width: 800px;
   position: relative;
 }
-.history-search {
-  width: 100%;
-  max-width: 300px;
-  padding: 8px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 10px;
 }
+.history-filters label {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.history-filters input[type="date"] {
+  padding: 6px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.filter-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.filter-btn:hover {
+  background-color: #138496;
+}
+.filter-btn-reset {
+  background-color: #6c757d;
+}
+.filter-btn-reset:hover {
+  background-color: #5a6268;
+}
+
+.history-search {
+  width: 100%;
+  max-width: 200px;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.history-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #e8f4fd, #f0e6ff);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #444;
+}
+.history-stats:empty {
+  display: none;
+}
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.stat-value {
+  font-weight: bold;
+  color: #007bff;
+}
+
+.record-count {
+  font-size: 13px;
+  color: #666;
+  margin-right: 15px;
+}
+.storage-size {
+  font-size: 13px;
+  color: #999;
+}
+
 .history {
-  margin-top: 20px;
-  max-height: 300px;
+  margin-top: 10px;
+  max-height: 400px;
   overflow-y: auto;
   border: 1px solid #ccc;
-  padding: 10px;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+.history-pagination:empty {
+  display: none;
+}
+.page-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.page-btn:hover {
+  background-color: #0056b3;
+}
+.page-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .clear-btn {
@@ -134,11 +287,10 @@ button:hover {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: background-color 0.2s;
 }
 .clear-btn:hover {
   background-color: #c82333;
-  transform: scale(1.05);
 }
 
 #copy-btn {
@@ -155,6 +307,13 @@ button:hover {
 }
 #export-btn:hover {
   background-color: #1976d2;
+}
+
+/* -- 搜尋高亮 -- */
+mark {
+  background-color: #fff3cd;
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
 /* -- SweetAlert2 (設置彈窗) -- */
@@ -189,13 +348,4 @@ button:hover {
 }
 .swal2-modal .action-btn:hover {
   background-color: #138496;
-}
-
-.animation-container {
-  width: 300px;
-  height: 300px;
-  margin: 20px auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
